@@ -23,7 +23,7 @@
     "docker:test": "docker-compose -f docker-compose.yml -f docker-compose.test.yml up",
     "docker:dev-db:start": "docker-compose -f docker-compose.only-db-dev.yml up -d",
     "docker:dev-db:stop": "docker-compose -f docker-compose.only-db-dev.yml down",
-    "build": "rimraf build && tsc -p tsconfig.json",
+    "build": "rimraf build && npx prisma generate --schema prisma/schema.prisma && npx prisma generate --schema prisma/db2/schema.prisma && tsc -p tsconfig.json",
     "prisma:generate:db2": "yarn prisma generate --schema=prisma/db2/schema.prisma",
     "prisma:migrate:db2": "yarn prisma migrate deploy --schema=prisma/db2/schema.prisma",
     "prisma:generate": "yarn prisma generate --schema=prisma/schema.prisma",
