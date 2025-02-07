@@ -1,6 +1,7 @@
 {
   "name": "prisma-express-typescript-boilerplate",
   "version": "1.0.0",
+  "engines": { "node": ">=20.18.2" },
   "description": "REST API Boilerplate with Node JS, TypeScript, Express and Prisma",
   "main": "src/index.ts",
   "repository": "https://github.com/antonio-lazaro/prisma-express-typescript-boilerplate.git",
