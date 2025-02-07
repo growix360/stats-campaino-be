@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es2016",
-    "outDir": "./build",
     "module": "commonjs",
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
+    "outDir": "./build",
     "types": ["node"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
