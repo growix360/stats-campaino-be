@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client"
+import { Role } from "../../generated/client2"
 
 const allRoles = {
   [Role.USER]: [],

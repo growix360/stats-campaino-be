@@ -1,15 +1,15 @@
 import { ErrorRequestHandler } from "express"
-import { Prisma } from "@prisma/client"
 import httpStatus from "http-status"
 import config from "../config/config"
 import logger from "../config/logger"
 import ApiError from "../utils/ApiError"
+import { PrismaTypesDB2 } from "../client"
 
 export const errorConverter: ErrorRequestHandler = (err, req, res, next) => {
   let error = err
   if (!(error instanceof ApiError)) {
     const statusCode =
-      error.statusCode || error instanceof Prisma.PrismaClientKnownRequestError
+      error.statusCode || error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
         ? httpStatus.BAD_REQUEST
         : httpStatus.INTERNAL_SERVER_ERROR
     const message = error.message || httpStatus[statusCode]

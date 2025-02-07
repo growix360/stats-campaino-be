@@ -2,7 +2,6 @@ import express from "express"
 import authRoute from "./auth.route"
 import campaignRoute from "./campaign.route"
 import linksRoute from "./links.route"
-import docsRoute from "./docs.route"
 import config from "../../config/config"
 
 const router = express.Router()
@@ -25,10 +24,6 @@ const defaultRoutes = [
 
 const devRoutes = [
   // routes available only in development mode
-  {
-    path: "/docs",
-    route: docsRoute,
-  },
   {
     path: "/campaign",
     route: campaignRoute,

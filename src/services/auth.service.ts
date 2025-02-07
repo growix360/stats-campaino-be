@@ -1,4 +1,4 @@
-import { User, Role } from "@prisma/client"
+import { User, Role } from "../../generated/client2"
 import { prismaDB2 } from "../client"
 import ApiError from "../utils/ApiError"
 import { encryptPassword } from "../utils/encryption"

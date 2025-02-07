@@ -1,8 +1,8 @@
-import { PrismaClient as PrismaClientDB1 } from "@prisma/client" // For the first database
-import { PrismaClient as PrismaClientDB2 } from "../node_modules/.prisma/client2"
+import { PrismaClient as PrismaClientDB1 } from "../generated/client1" // For the first database
+import { PrismaClient as PrismaClientDB2 } from "../generated/client2"
 
-import { Prisma as PrismaTypesDB1 } from "@prisma/client" // Types for DB1
-import { Prisma as PrismaTypesDB2 } from "../node_modules/.prisma/client2" // Types for DB2
+import { Prisma as PrismaTypesDB1 } from "../generated/client1" // Types for DB1
+import { Prisma as PrismaTypesDB2 } from "../generated/client2" // Types for DB2
 import config from "./config/config"
 
 // Define global type to prevent multiple instances in dev mode
@@ -23,6 +23,8 @@ if (config.env === "development") {
   global.prismaDB1 = prismaDB1
   global.prismaDB2 = prismaDB2
 }
+global.prismaDB1 = prismaDB1
+global.prismaDB2 = prismaDB2
 
 // Export both clients and types
 export { prismaDB1, prismaDB2, PrismaTypesDB1, PrismaTypesDB2 }

@@ -2,7 +2,7 @@ import httpStatus from "http-status"
 import ApiError from "../utils/ApiError"
 import catchAsync from "../utils/catchAsync"
 import { campaignService } from "../services"
-import { User } from "@prisma/client"
+import { User } from "../../generated/client2"
 
 const createCampaign = catchAsync(async (req, res) => {
   const user: User = req.user as User
