@@ -11,7 +11,6 @@ const envVarsSchema = Joi.object()
     JWT_SECRET: Joi.string().required().description("JWT secret key"),
     DATABASE_URL: Joi.string().required().description("DATABASE_URL is required in env"),
     DATABASE_URL_DB2: Joi.string().required().description("DATABASE_URL_DB2 is required in env"),
-    BASE_URL: Joi.string().required().description("BASE_URL is required in env"),
   })
   .unknown()
 
