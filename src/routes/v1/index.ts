@@ -1,7 +1,6 @@
 import express from "express"
 import authRoute from "./auth.route"
 import campaignRoute from "./campaign.route"
-import linksRoute from "./links.route"
 import config from "../../config/config"
 
 const router = express.Router()
@@ -14,11 +13,6 @@ const defaultRoutes = [
   {
     path: "/campaign",
     route: campaignRoute,
-  },
-
-  {
-    path: "/link",
-    route: linksRoute,
   },
 ]
 

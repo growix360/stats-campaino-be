@@ -1,4 +1,4 @@
-import { Role } from "../../generated/client2"
+import { Role } from "../../generated/client1"
 
 const allRoles = {
   [Role.USER]: [],

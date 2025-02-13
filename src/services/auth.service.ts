@@ -1,5 +1,5 @@
-import { User, Role } from "../../generated/client2"
-import { prismaDB2 } from "../client"
+import { User, Role } from "../../generated/client1"
+import { prismaDB1 } from "../client"
 import ApiError from "../utils/ApiError"
 import { encryptPassword } from "../utils/encryption"
 import jwt from "jsonwebtoken"
@@ -10,9 +10,9 @@ const register = async (
   email: string,
   password: string,
   name: string,
-  role: Role = Role.MANAGER
+  role: Role = Role.MANAGER,
 ): Promise<Partial<User> & { access_token: string }> => {
-  const existingUser = await prismaDB2.user.findUnique({
+  const existingUser = await prismaDB1.user.findUnique({
     where: { email },
   })
 
@@ -21,7 +21,7 @@ const register = async (
     throw new ApiError(409, "User with this email already exists.")
   }
 
-  const user = await prismaDB2.user.create({
+  const user = await prismaDB1.user.create({
     data: {
       email,
       name,
@@ -45,19 +45,18 @@ const register = async (
       role: user.role,
     },
     JWT_SECRET,
-    { expiresIn: "1h" } // Token expires in 1 hour
+    { expiresIn: "1h" },
   )
 
-  // Return the created user along with the token
   return { ...user, access_token }
 }
 
 const loginUserWithEmailAndPassword = async (
   email: string,
-  password: string
+  password: string,
 ): Promise<Partial<User> & { access_token: string }> => {
   // Find the user by email
-  const existingUser = await prismaDB2.user.findUnique({
+  const existingUser = await prismaDB1.user.findUnique({
     where: { email },
     select: {
       id: true,
@@ -89,10 +88,10 @@ const loginUserWithEmailAndPassword = async (
       role: existingUser.role,
     },
     JWT_SECRET,
-    { expiresIn: "1h" } // Token expires in 1 hour
+    { expiresIn: "1h" }, // Token expires in 1 hour
   )
 
-  // Exclude the password from the returned object
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...userWithoutPassword } = existingUser
 
   // Return the user data and the access token

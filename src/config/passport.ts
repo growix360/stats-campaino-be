@@ -1,4 +1,4 @@
-import { prismaDB2 } from "../client"
+import { prismaDB1 } from "../client"
 import { Strategy as JwtStrategy, ExtractJwt, VerifyCallback } from "passport-jwt"
 import config from "./config"
 
@@ -9,7 +9,7 @@ const jwtOptions = {
 
 const jwtVerify: VerifyCallback = async (payload, done) => {
   try {
-    const user = await prismaDB2.user.findUnique({
+    const user = await prismaDB1.user.findUnique({
       select: {
         id: true,
         email: true,

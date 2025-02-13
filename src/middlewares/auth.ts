@@ -3,14 +3,14 @@ import httpStatus from "http-status"
 import ApiError from "../utils/ApiError"
 // import { roleRights } from "../config/roles"
 import { NextFunction, Request, Response } from "express"
-import { User } from "../../generated/client2"
+import { User } from "../../generated/client1"
 
 const verifyCallback =
   (
     req: Request,
     resolve: (value?: unknown) => void,
     reject: (reason?: unknown) => void,
-    requiredRights: string[]
+    requiredRights: string[],
   ) =>
   async (err: unknown, user: User | false, info: unknown) => {
     if (err || info || !user) {
@@ -39,7 +39,7 @@ const auth =
         "jwt",
         { session: false },
 
-        verifyCallback(req, resolve, reject, requiredRights)
+        verifyCallback(req, resolve, reject, requiredRights),
       )(req, res, next)
     })
       .then(() => next())

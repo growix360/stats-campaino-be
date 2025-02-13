@@ -10,66 +10,134 @@ datasource db {
 }
 
 model Campaign {
-  id           String     @id
+  id           String    @id @default(uuid())
   name         String
   subject      String
-  emailListId  String?
+  link         String
   emailBody    String
+  emailListId  String?
   createdBy    String
   templateName String
-  isRun        Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime
+  templateId   String // Reference to the template used
+  hasCompleted Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
-  User         User       @relation(fields: [createdBy], references: [id])
-  EmailList    EmailList? @relation(fields: [emailListId], references: [id])
-  Email        Email[]
-}
 
-model Email {
-  id          String    @id @default(uuid())
-  email       String
-  messageId   String?   @unique
-  campaignId  String
-  delivery    Int       @default(0)
-  opens       Int       @default(0)
-  clicks      Int       @default(0)
-  bounce      Int       @default(0)
-  uniqueOpen  Int       @default(0)
-  uniqueClick Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  Campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  emails      Email[]
+  openEvents  Open[]
+  clickEvents Click[]
+
+  createdByUser User       @relation("UserCampaigns", fields: [createdBy], references: [id])
+  emailList     EmailList? @relation(fields: [emailListId], references: [id])
+  template      Template?  @relation(fields: [templateId], references: [id]) // Relation to Template model
 }
 
 model EmailList {
-  id         String     @id
+  id         String     @id @default(uuid())
   name       String
   emails     String[]
   uploadedAt DateTime   @default(now())
   isUsed     Boolean    @default(false)
   createdAt  DateTime   @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime   @updatedAt
   deletedAt  DateTime?
-  Campaign   Campaign[]
+  campaigns  Campaign[]
 }
 
 model User {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  password  String
-  role      Role       @default(USER)
-  phone     String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime
-  deletedAt DateTime?
-  Campaign  Campaign[]
+  id               String     @id @default(uuid())
+  name             String
+  email            String     @unique()
+  password         String
+  role             Role       @default(USER)
+  phone            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deletedAt        DateTime?
+  campaigns        Campaign[] @relation("UserCampaigns")
+  createdTemplates Template[] @relation("UserTemplates")
+}
+
+model Email {
+  id             String      @id @default(uuid())
+  email          String
+  messageId      String?     @unique
+  campaignId     String
+  deliveryStatus EmailStatus
+  message        String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+
+  openEvents  Open[]
+  clickEvents Click[]
+}
+
+model Open {
+  id         String   @id @default(uuid())
+  emailId    String
+  campaignId String
+  ipAddress  String
+  userAgent  String
+  createdAt  DateTime @default(now())
+
+  email    Email    @relation(fields: [emailId], references: [id])
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+}
+
+model Click {
+  id         String   @id @default(uuid())
+  emailId    String
+  campaignId String
+  ipAddress  String
+  userAgent  String
+  createdAt  DateTime @default(now())
+
+  email    Email    @relation(fields: [emailId], references: [id])
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+}
+
+model Links {
+  id          String    @id @default(uuid())
+  originalUrl String
+  shortUrl    String
+  clicks      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+}
+
+model Template {
+  id            String     @id @default(uuid())
+  name          String     @unique
+  subject       String
+  emailBody     String
+  createdBy     String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  createdByUser User       @relation("UserTemplates", fields: [createdBy], references: [id])
+  userId        String?
+  Campaign      Campaign[]
 }
 
 enum Role {
   MANAGER
   ADMIN
   USER
+}
+
+enum EmailStatus {
+  Send
+  RenderingFailure
+  Reject
+  Delivery
+  Bounce
+  Complaint
+  DeliveryDelay
+  Subscription
+  MessageRejected
 }

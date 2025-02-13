@@ -7,19 +7,11 @@ import auth from "../../middlewares/auth"
 const router = express.Router()
 
 router
-  .route("/stats/:campaignId")
-  .get(
-    auth("ADMIN"),
-    validate(campaignValidation.getCampaignStats),
-    campaignController.campaignStats
-  )
-router
-  .route("/")
-  .post(
-    auth("ADMIN"),
-    validate(campaignValidation.createCampaign),
-    campaignController.createCampaign
-  )
-  .get(auth("ADMIN"), campaignController.getCampaigns)
+  .route("/add-stats")
+  .post(auth(), validate(campaignValidation.addStats), campaignController.addStats)
+
+router.route("/updates").get(auth("ADMIN"), campaignController.getCampaignsUpdateStatus)
+
+router.route("/").get(auth("ADMIN"), campaignController.getCampaigns)
 
 export default router
