@@ -74,6 +74,10 @@ const loginUserWithEmailAndPassword = async (
     throw new ApiError(404, "User with this email does not exist.")
   }
 
+  if (existingUser.role == Role.MANAGER || existingUser.role == Role.ADMIN) {
+    throw new ApiError(401, "you are not allowed to login.")
+  }
+
   // Validate the password
   const isPasswordValid = await isPasswordMatch(password, existingUser.password)
   if (!isPasswordValid) {
