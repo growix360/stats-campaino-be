@@ -12,6 +12,7 @@ import { authLimiter } from "./middlewares/rateLimiter"
 import routes from "./routes/v1"
 import { errorConverter, errorHandler } from "./middlewares/error"
 import ApiError from "./utils/ApiError"
+import { Request, Response, NextFunction } from "express"
 
 const app = express()
 
@@ -52,6 +53,15 @@ console.log(process.env.DATABASE_URL)
 
 // v1 api routes
 app.use("/v1", routes)
+
+//healthcheck
+app.use("/health", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.status(httpStatus.OK).send({ message: "ok" })
+  } catch (error) {
+    next(error)
+  }
+})
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {

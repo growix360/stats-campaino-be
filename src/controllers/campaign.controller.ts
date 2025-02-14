@@ -18,7 +18,7 @@ const addStats = catchAsync(async (req, res) => {
     clicks: clicks,
     uniqueClicks: uniqueClicks,
   })
-  res.status(httpStatus.CREATED).send(campaign)
+  return res.status(httpStatus.CREATED).send(campaign)
 })
 
 const getCampaigns = catchAsync(async (req, res) => {
@@ -36,7 +36,7 @@ const getCampaigns = catchAsync(async (req, res) => {
     limit,
   })
 
-  res.status(httpStatus.OK).json(campaigns)
+  return res.status(httpStatus.OK).json(campaigns)
 })
 
 const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
@@ -54,7 +54,7 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
     limit,
   })
 
-  res.status(httpStatus.OK).json(campaigns)
+  return res.status(httpStatus.OK).json(campaigns)
 })
 
 export default {
