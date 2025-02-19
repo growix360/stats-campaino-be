@@ -10,8 +10,16 @@ router
   .route("/add-stats")
   .post(auth(), validate(campaignValidation.addStats), campaignController.addStats)
 
-router.route("/updates").get(auth("ADMIN"), campaignController.getCampaignsUpdateStatus)
+router
+  .route("/updates")
+  .get(
+    auth("ADMIN"),
+    validate(campaignValidation.getAllCampaignUpdates),
+    campaignController.getCampaignsUpdateStatus,
+  )
 
-router.route("/").get(auth("ADMIN"), campaignController.getCampaigns)
+router
+  .route("/")
+  .get(auth("ADMIN"), validate(campaignValidation.getAllCampaign), campaignController.getCampaigns)
 
 export default router
