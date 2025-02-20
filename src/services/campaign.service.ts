@@ -62,6 +62,7 @@ const getCampaignsUpdateStatus = async (payload: {
   search: string
   sortBy: keyof PrismaDB2.CampaignUpdateHistoryOrderByWithRelationInput
   sortDirection?: PrismaDB2.SortOrder
+  campaignId?: string
 }) => {
   const user = await prismaDB1.user.findUnique({ where: { id: payload.userId } })
   if (!user) {
@@ -81,6 +82,7 @@ const getCampaignsUpdateStatus = async (payload: {
           OR: [{ name: { contains: payload.search, mode: "insensitive" } }],
         }
       : {}),
+    ...(payload.campaignId ? { campaignId: payload.campaignId } : {}),
   }
 
   const campaigns = await prismaDB2.campaignUpdateHistory.findMany({

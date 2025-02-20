@@ -58,6 +58,7 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
   const search = req.query.search as string | ""
   const sortBy = req.query.sortBy as keyof PrismaDB2.CampaignUpdateHistoryOrderByWithRelationInput
   const sortDirection = req.query.sortDirection as PrismaDB2.SortOrder
+  const campaignId = req.query.campaignId as string
 
   const campaigns = await campaignService.getCampaignsUpdateStatus({
     userId: user.id,
@@ -66,6 +67,7 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
     search,
     sortBy,
     sortDirection,
+    campaignId,
   })
 
   return res.status(httpStatus.OK).json(campaigns)

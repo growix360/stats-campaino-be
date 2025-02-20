@@ -1,4 +1,5 @@
 import { prismaDB1 as prisma, prismaDB2 } from "../client"
+import { Default_UserAgent, getRandomUserAgent } from "../utils/UserAgents"
 
 const addStatsEvents = async (payload: {
   campaignId: string
@@ -12,21 +13,31 @@ const addStatsEvents = async (payload: {
     if (!campaign) {
       throw new Error("Campaign not found")
     }
+
     // Fetch all campaign emails
     const allEmails = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId },
+      where: { campaignId: payload.campaignId, messageId: { not: null } },
       select: { id: true },
     })
 
+    if (allEmails.length === 0) {
+      throw new Error(
+        `No processed emails found for campaign ${payload.campaignId}. Cannot add stats.`,
+      )
+    }
     // Get emails that haven't been opened yet (for unique opens)
     const emailsWithoutOpens = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId, openEvents: { none: {} } },
+      where: { campaignId: payload.campaignId, messageId: { not: null }, openEvents: { none: {} } },
       select: { id: true },
     })
 
     // Get emails that haven't been clicked yet (for unique clicks)
     const emailsWithoutClicks = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId, clickEvents: { none: {} } },
+      where: {
+        campaignId: payload.campaignId,
+        messageId: { not: null },
+        clickEvents: { none: {} },
+      },
       select: { id: true },
     })
 
@@ -44,7 +55,7 @@ const addStatsEvents = async (payload: {
       emailId: email.id,
       campaignId: payload.campaignId,
       ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      userAgent: getRandomUserAgent(),
     }))
 
     // Generate additional fake open events (randomly assigned to any email)
@@ -52,7 +63,7 @@ const addStatsEvents = async (payload: {
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
       ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      userAgent: Default_UserAgent,
     })).filter((event) => event.emailId) // Remove any undefined values
 
     // Generate fake unique click events
@@ -60,7 +71,7 @@ const addStatsEvents = async (payload: {
       emailId: email.id,
       campaignId: payload.campaignId,
       ipAddress: `10.0.0.${Math.floor(Math.random() * 255)}`,
-      userAgent: "Mozilla/5.0 (Windows NT 6.1; Win64; x64)",
+      userAgent: getRandomUserAgent(),
     }))
 
     // Generate additional fake click events (randomly assigned to any email)
@@ -68,14 +79,16 @@ const addStatsEvents = async (payload: {
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
       ipAddress: `10.0.0.${Math.floor(Math.random() * 255)}`,
-      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)",
+      userAgent: Default_UserAgent,
     })).filter((event) => event.emailId)
 
     // Insert fake events into the database
-    await prisma.open.createMany({ data: uniqueOpenEvents })
-    await prisma.open.createMany({ data: allOpenEvents })
-    await prisma.click.createMany({ data: uniqueClickEvents })
-    await prisma.click.createMany({ data: allClickEvents })
+    await prisma.$transaction([
+      prisma.open.createMany({ data: uniqueOpenEvents }),
+      prisma.open.createMany({ data: allOpenEvents }),
+      prisma.click.createMany({ data: uniqueClickEvents }),
+      prisma.click.createMany({ data: allClickEvents }),
+    ])
 
     console.log(
       `Added ${uniqueOpenEvents.length} unique opens, ${allOpenEvents.length} total opens, ${uniqueClickEvents.length} unique clicks, and ${allClickEvents.length} total clicks to campaign ${payload.campaignId}`,

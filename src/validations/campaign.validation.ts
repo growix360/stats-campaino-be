@@ -11,7 +11,7 @@ const getCampaignStats = {
 }
 const addStats = {
   body: Joi.object().keys({
-    campaignId: Joi.string().required(),
+    campaignId: Joi.string().guid().required(),
     opens: Joi.number().required(),
     uniqueOpens: Joi.number().required(),
     clicks: Joi.number().required(),
@@ -21,6 +21,7 @@ const addStats = {
 
 const getAllCampaignUpdates = {
   query: Joi.object().keys({
+    campaignId: Joi.string().guid().optional(),
     limit: Joi.number().integer().positive().default(10),
     page: Joi.number().integer().positive().default(1),
     search: Joi.string().allow("").optional(),
