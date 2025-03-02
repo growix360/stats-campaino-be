@@ -10,19 +10,20 @@ datasource db {
 }
 
 model Campaign {
-  id           String    @id @default(uuid())
-  name         String
-  subject      String
-  link         String
-  emailBody    String
-  emailListId  String?
-  createdBy    String
-  templateName String
-  templateId   String // Reference to the template used
-  hasCompleted Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  id              String    @id @default(uuid())
+  name            String
+  subject         String
+  link            String
+  emailBody       String
+  emailListId     String?
+  createdBy       String
+  templateName    String
+  selzyCampaignId Int?      @unique
+  templateId      String // Reference to the template used
+  hasCompleted    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 
   emails      Email[]
   openEvents  Open[]
@@ -34,15 +35,20 @@ model Campaign {
 }
 
 model EmailList {
-  id         String     @id @default(uuid())
-  name       String
-  emails     String[]
-  uploadedAt DateTime   @default(now())
-  isUsed     Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  deletedAt  DateTime?
-  campaigns  Campaign[]
+  id              String     @id @default(uuid())
+  name            String
+  selzyListId     Int?
+  totalRecords    Int?
+  insertedRecords Int?
+  updatedRecords  Int?
+  invalidRecords  Int?
+  emails          String[]
+  uploadedAt      DateTime   @default(now())
+  isUsed          Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+  campaigns       Campaign[]
 }
 
 model User {
@@ -60,15 +66,15 @@ model User {
 }
 
 model Email {
-  id             String      @id @default(uuid())
-  email          String
-  messageId      String?     @unique
-  campaignId     String
-  deliveryStatus EmailStatus
-  message        String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  deletedAt      DateTime?
+  id              String      @id @default(uuid())
+  email           String
+  campaignId      String
+  selzyCampaignId Int
+  deliveryStatus  EmailStatus
+  message         String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -111,17 +117,17 @@ model Links {
 }
 
 model Template {
-  id            String     @id @default(uuid())
-  name          String     @unique
-  subject       String
-  emailBody     String
-  createdBy     String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deletedAt     DateTime?
-  createdByUser User       @relation("UserTemplates", fields: [createdBy], references: [id])
-  userId        String?
-  Campaign      Campaign[]
+  id              String     @id @default(uuid())
+  name            String     @unique
+  subject         String
+  selzyTemplateId Int?
+  emailBody       String
+  createdBy       String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+  createdByUser   User       @relation("UserTemplates", fields: [createdBy], references: [id])
+  Campaign        Campaign[]
 }
 
 enum Role {
@@ -131,13 +137,13 @@ enum Role {
 }
 
 enum EmailStatus {
-  Send
-  RenderingFailure
-  Reject
-  Delivery
-  Bounce
-  Complaint
-  DeliveryDelay
-  Subscription
-  MessageRejected
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  UNSUBSCRIBED
+  UNSENT
+  SPAM
+  UNSOLICITED
+  UNSUCCESSFUL
 }

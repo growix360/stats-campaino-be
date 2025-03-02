@@ -16,7 +16,7 @@ const addStatsEvents = async (payload: {
 
     // Fetch all campaign emails
     const allEmails = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId, messageId: { not: null } },
+      where: { campaignId: payload.campaignId },
       select: { id: true },
     })
 
@@ -27,7 +27,7 @@ const addStatsEvents = async (payload: {
     }
     // Get emails that haven't been opened yet (for unique opens)
     const emailsWithoutOpens = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId, messageId: { not: null }, openEvents: { none: {} } },
+      where: { campaignId: payload.campaignId, openEvents: { none: {} } },
       select: { id: true },
     })
 
@@ -35,7 +35,6 @@ const addStatsEvents = async (payload: {
     const emailsWithoutClicks = await prisma.email.findMany({
       where: {
         campaignId: payload.campaignId,
-        messageId: { not: null },
         clickEvents: { none: {} },
       },
       select: { id: true },
