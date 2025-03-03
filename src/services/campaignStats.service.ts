@@ -1,5 +1,10 @@
 import { prismaDB1 as prisma, prismaDB2 } from "../client"
-import { Default_UserAgent, getRandomUserAgent } from "../utils/UserAgents"
+import {
+  Default_UserAgent,
+  Default_UserIP,
+  getRandomUserAgent,
+  getRandomUserIP,
+} from "../utils/UserAgents"
 
 const addStatsEvents = async (payload: {
   campaignId: string
@@ -53,7 +58,7 @@ const addStatsEvents = async (payload: {
     const uniqueOpenEvents = selectedForUniqueOpens.map((email) => ({
       emailId: email.id,
       campaignId: payload.campaignId,
-      ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+      ipAddress: getRandomUserIP(),
       userAgent: getRandomUserAgent(),
     }))
 
@@ -61,7 +66,7 @@ const addStatsEvents = async (payload: {
     const allOpenEvents = Array.from({ length: payload.opens }, () => ({
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
-      ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+      ipAddress: Default_UserIP,
       userAgent: Default_UserAgent,
     })).filter((event) => event.emailId) // Remove any undefined values
 
@@ -69,15 +74,16 @@ const addStatsEvents = async (payload: {
     const uniqueClickEvents = selectedForUniqueClicks.map((email) => ({
       emailId: email.id,
       campaignId: payload.campaignId,
-      ipAddress: `10.0.0.${Math.floor(Math.random() * 255)}`,
+      ipAddress: getRandomUserIP(),
       userAgent: getRandomUserAgent(),
     }))
+    console.log("\n🚀 ~\n uniqueClickEvents:\t", uniqueClickEvents)
 
     // Generate additional click events (randomly assigned to any email)
     const allClickEvents = Array.from({ length: payload.clicks }, () => ({
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
-      ipAddress: `10.0.0.${Math.floor(Math.random() * 255)}`,
+      ipAddress: Default_UserIP,
       userAgent: Default_UserAgent,
     })).filter((event) => event.emailId)
 
