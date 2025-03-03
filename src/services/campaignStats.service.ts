@@ -49,7 +49,7 @@ const addStatsEvents = async (payload: {
       .sort(() => 0.5 - Math.random())
       .slice(0, payload.uniqueClicks)
 
-    // Generate fake unique open events
+    // Generate unique open events
     const uniqueOpenEvents = selectedForUniqueOpens.map((email) => ({
       emailId: email.id,
       campaignId: payload.campaignId,
@@ -57,7 +57,7 @@ const addStatsEvents = async (payload: {
       userAgent: getRandomUserAgent(),
     }))
 
-    // Generate additional fake open events (randomly assigned to any email)
+    // Generate additional open events (randomly assigned to any email)
     const allOpenEvents = Array.from({ length: payload.opens }, () => ({
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
@@ -65,7 +65,7 @@ const addStatsEvents = async (payload: {
       userAgent: Default_UserAgent,
     })).filter((event) => event.emailId) // Remove any undefined values
 
-    // Generate fake unique click events
+    // Generate unique click events
     const uniqueClickEvents = selectedForUniqueClicks.map((email) => ({
       emailId: email.id,
       campaignId: payload.campaignId,
@@ -73,7 +73,7 @@ const addStatsEvents = async (payload: {
       userAgent: getRandomUserAgent(),
     }))
 
-    // Generate additional fake click events (randomly assigned to any email)
+    // Generate additional click events (randomly assigned to any email)
     const allClickEvents = Array.from({ length: payload.clicks }, () => ({
       emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
       campaignId: payload.campaignId,
@@ -81,7 +81,7 @@ const addStatsEvents = async (payload: {
       userAgent: Default_UserAgent,
     })).filter((event) => event.emailId)
 
-    // Insert fake events into the database
+    // Insert events into the database
     await prisma.$transaction([
       prisma.open.createMany({ data: uniqueOpenEvents }),
       prisma.open.createMany({ data: allOpenEvents }),
@@ -112,7 +112,7 @@ const addStatsEvents = async (payload: {
       totalClicks: allClickEvents.length,
     }
   } catch (error) {
-    console.error("Error adding fake events:", error)
+    console.error("Error adding events:", error)
     throw error
   }
 }
