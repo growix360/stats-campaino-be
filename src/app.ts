@@ -49,7 +49,6 @@ if (config.env === "production") {
   app.use("/v1/auth", authLimiter)
 }
 app.use(express.raw({ type: "text/plain" }))
-console.log(process.env.DATABASE_URL)
 
 // v1 api routes
 app.use("/v1", routes)
