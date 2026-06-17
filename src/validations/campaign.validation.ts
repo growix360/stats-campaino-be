@@ -12,10 +12,11 @@ const getCampaignStats = {
 const addStats = {
   body: Joi.object().keys({
     campaignId: Joi.string().guid().required(),
-    opens: Joi.number().required(),
-    uniqueOpens: Joi.number().required(),
-    clicks: Joi.number().required(),
-    uniqueClicks: Joi.number().required(),
+    delivered: Joi.number().integer().min(0).required(),
+    opens: Joi.number().integer().min(0).required(),
+    uniqueOpens: Joi.number().integer().min(0).required(),
+    clicks: Joi.number().integer().min(0).required(),
+    uniqueClicks: Joi.number().integer().min(0).required(),
   }),
 }
 

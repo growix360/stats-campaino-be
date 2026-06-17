@@ -1,0 +1,1 @@
+ALTER TABLE "CampaignUpdateHistory" ADD COLUMN IF NOT EXISTS "delivered" INTEGER NOT NULL DEFAULT 0;

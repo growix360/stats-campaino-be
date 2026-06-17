@@ -11,6 +11,10 @@ router
   .post(auth(), validate(campaignValidation.addStats), campaignController.addStats)
 
 router
+  .route("/:campaignId/current-stats")
+  .get(auth(), validate(campaignValidation.getCampaignStats), campaignController.getCurrentStats)
+
+router
   .route("/updates")
   .get(
     auth("ADMIN"),

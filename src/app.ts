@@ -41,7 +41,7 @@ app.use(cors())
 app.options("*", cors())
 
 // jwt authentication
-// app.use(passport.initialize());
+app.use(passport.initialize());
 passport.use("jwt", jwtStrategy)
 
 // limit repeated failed requests to auth endpoints

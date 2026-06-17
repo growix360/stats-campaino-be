@@ -9,7 +9,7 @@ import { Prisma as PrismaDB1 } from "../../generated/client1"
 
 const addStats = catchAsync(async (req, res) => {
   const user: User = req.user as User
-  const { campaignId, opens, uniqueOpens, clicks, uniqueClicks } = req.body
+  const { campaignId, opens, uniqueOpens, clicks, uniqueClicks, delivered } = req.body
   if (!user) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "User not authenticated")
   }
@@ -19,6 +19,7 @@ const addStats = catchAsync(async (req, res) => {
     uniqueOpens: uniqueOpens,
     clicks: clicks,
     uniqueClicks: uniqueClicks,
+    delivered: delivered,
   })
   return res.status(httpStatus.CREATED).send(campaign)
 })
@@ -73,8 +74,20 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
   return res.status(httpStatus.OK).json(campaigns)
 })
 
+const getCurrentStats = catchAsync(async (req, res) => {
+  const user: User = req.user as User
+  if (!user) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, "User not authenticated")
+  }
+
+  const { campaignId } = req.params
+  const stats = await campaignStatsService.getCurrentStats(campaignId)
+  return res.status(httpStatus.OK).json(stats)
+})
+
 export default {
   getCampaigns: getCampaigns,
   addStats,
+  getCurrentStats,
   getCampaignsUpdateStatus,
 }
