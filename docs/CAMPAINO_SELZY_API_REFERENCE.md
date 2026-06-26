@@ -34,10 +34,10 @@ DB2 (DATABASE_URL_DB2) → Local stats audit log
 
 | Method | Path | Role | Purpose |
 |--------|------|------|---------|
-| `POST` | `/v1/campaign/update-stats` | ADMIN, MANAGER | Set target stats (sent → delivered → opens → clicks); optional CSV/txt upload for new recipients |
-| `GET` | `/v1/campaign/:campaignId/current-stats` | Authenticated | Read funnel stats + max allowed targets |
-| `GET` | `/v1/campaign/` | ADMIN | List campaigns from DB1 |
-| `GET` | `/v1/campaign/updates` | ADMIN | List stats update history from DB2 |
+| `POST` | `/v1/campaign/update-stats` | ADMIN (all), MANAGER (assigned domains) | Set target stats |
+| `GET` | `/v1/campaign/:campaignId/current-stats` | ADMIN (all), MANAGER (assigned domains) | Read funnel stats + limits |
+| `GET` | `/v1/campaign/` | ADMIN (all), MANAGER (assigned domains) | Paginated campaign list |
+| `GET` | `/v1/campaign/updates` | ADMIN (all), MANAGER (assigned domains) | Stats update audit history |
 | `GET` | `/v1/docs` | Public | Swagger UI for this service |
 
 #### Swagger
@@ -64,6 +64,8 @@ At least one target field required. Omitted fields keep current values. Targets 
 When `sent` increases, new `Email` rows are created and appended to the campaign's `EmailList`. If no file is uploaded, random addresses are picked from `docs/customers-100000.csv` (override via `CUSTOMERS_CSV_PATH`).
 
 When the main backend schema or auth changes, update DB1 schema and this repo's services accordingly.
+
+**Frontend integration:** see [FRONTEND_BE_UPDATES.md](./FRONTEND_BE_UPDATES.md) for required UI changes after recent BE updates.
 
 ---
 
@@ -183,7 +185,7 @@ router.post("/", auth(), requireRole(Role.ADMIN, Role.MANAGER), handler)
 
 **Always apply access control in services**, not just route-level role checks.
 
-> **Note for this repo:** Route auth uses `auth(Role.ADMIN)` / `auth(Role.ADMIN, Role.MANAGER)` with role checks enforced in `src/middlewares/auth.ts`. String forms like `auth("ADMIN")` are also accepted. Tokens must be issued by (or compatible with) the main backend's JWT secret.
+> **Note for this repo:** Route auth uses `auth(Role.ADMIN, Role.MANAGER)`. **ADMIN** has full access. **MANAGER** is scoped to campaigns whose `domainId` is in their `UserDomain` assignments (see `src/utils/accessControl.ts`). **USER** cannot log in (403). Tokens must be compatible with the main backend's JWT secret.
 
 ### Adding a New Endpoint (main backend pattern)
 

@@ -41,7 +41,7 @@ const updateStats = catchAsync(async (req, res) => {
   const result = await campaignStatsService.updateStats({
     campaignId: parsed.campaignId,
     targets: parsed.targets,
-    userId: user.id,
+    user,
     upload: uploadFile,
     maxIncrease: config.stats.maxIncreasePerRequest,
     maxUploadEmails: config.stats.maxUploadEmails,
@@ -63,7 +63,7 @@ const getCampaigns = catchAsync(async (req, res) => {
   const sortDirection = req.query.sortDirection as PrismaDB1.SortOrder
 
   const campaigns = await campaignService.getCampaigns({
-    userId: user.id,
+    user,
     page,
     limit,
     search,
@@ -88,7 +88,7 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
   const campaignId = req.query.campaignId as string
 
   const campaigns = await campaignService.getCampaignsUpdateStatus({
-    userId: user.id,
+    user,
     page,
     limit,
     search,
@@ -107,7 +107,7 @@ const getCurrentStats = catchAsync(async (req, res) => {
   }
 
   const { campaignId } = req.params
-  const stats = await campaignStatsService.getCurrentStats(campaignId)
+  const stats = await campaignStatsService.getCurrentStats(campaignId, user)
   return res.status(httpStatus.OK).json(stats)
 })
 

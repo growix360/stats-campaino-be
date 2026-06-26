@@ -8,28 +8,38 @@ import { Role } from "../../../generated/client1"
 
 const router = express.Router()
 
+const privilegedRoles = [Role.ADMIN, Role.MANAGER]
+
 router
   .route("/update-stats")
   .post(
-    auth(Role.ADMIN, Role.MANAGER),
+    auth(...privilegedRoles),
     statsUpload.single("file"),
     campaignController.updateStats,
   )
 
 router
   .route("/:campaignId/current-stats")
-  .get(auth(), validate(campaignValidation.getCampaignStats), campaignController.getCurrentStats)
+  .get(
+    auth(...privilegedRoles),
+    validate(campaignValidation.getCampaignStats),
+    campaignController.getCurrentStats,
+  )
 
 router
   .route("/updates")
   .get(
-    auth(Role.ADMIN),
+    auth(...privilegedRoles),
     validate(campaignValidation.getAllCampaignUpdates),
     campaignController.getCampaignsUpdateStatus,
   )
 
 router
   .route("/")
-  .get(auth(Role.ADMIN), validate(campaignValidation.getAllCampaign), campaignController.getCampaigns)
+  .get(
+    auth(...privilegedRoles),
+    validate(campaignValidation.getAllCampaign),
+    campaignController.getCampaigns,
+  )
 
 export default router

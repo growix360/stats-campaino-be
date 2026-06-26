@@ -16,11 +16,13 @@ import {
   validateStatsUpdate,
 } from "../utils/statsValidation"
 import emailProvisioningService from "./emailProvisioning.service"
+import { assertCampaignAccess } from "../utils/accessControl"
 import {
   CampaignStatsSnapshot,
   CampaignStatsTargets,
   EmailSource,
 } from "../types/stats"
+import { User } from "../../generated/client1"
 
 const BATCH_SIZE = 1000
 
@@ -161,15 +163,8 @@ const createEventsInBatches = async (
   }
 }
 
-const getCurrentStats = async (campaignId: string) => {
-  const campaign = await prisma.campaign.findFirst({
-    where: { id: campaignId, deletedAt: null },
-    select: { id: true, name: true, hasCompleted: true },
-  })
-
-  if (!campaign) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Campaign not found")
-  }
+const getCurrentStats = async (campaignId: string, user: User) => {
+  const campaign = await assertCampaignAccess(user, campaignId)
 
   const snapshot = await buildSnapshot(campaignId)
   const dbPools = await fetchDbPools(campaignId)
@@ -194,19 +189,12 @@ const getCurrentStats = async (campaignId: string) => {
 const updateStats = async (payload: {
   campaignId: string
   targets: CampaignStatsTargets
-  userId: string
+  user: User
   upload?: { buffer: Buffer; originalname: string }
   maxIncrease: number
   maxUploadEmails: number
 }) => {
-  const campaign = await prisma.campaign.findFirst({
-    where: { id: payload.campaignId, deletedAt: null },
-    select: { id: true, name: true, emailListId: true },
-  })
-
-  if (!campaign) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Campaign not found")
-  }
+  const campaign = await assertCampaignAccess(payload.user, payload.campaignId)
 
   const before = await buildSnapshot(payload.campaignId)
   const provisionalResolved = resolveTargets(before, payload.targets)
@@ -396,7 +384,7 @@ const updateStats = async (payload: {
     data: {
       campaignId: payload.campaignId,
       name: campaign.name,
-      userId: payload.userId,
+      userId: payload.user.id,
       sent: deltas.sent,
       delivered: deltas.delivered,
       totalOpens: deltas.totalOpens,

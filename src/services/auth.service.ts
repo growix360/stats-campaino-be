@@ -1,6 +1,7 @@
 import { User, Role } from "../../generated/client1"
 import { prismaDB1 } from "../client"
 import ApiError from "../utils/ApiError"
+import httpStatus from "http-status"
 import { encryptPassword } from "../utils/encryption"
 import jwt from "jsonwebtoken"
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"
@@ -75,7 +76,7 @@ const loginUserWithEmailAndPassword = async (
   }
 
   if (existingUser.role !== Role.MANAGER && existingUser.role !== Role.ADMIN) {
-    throw new ApiError(401, "you are not allowed to login.")
+    throw new ApiError(httpStatus.FORBIDDEN, "You are not allowed to login.")
   }
 
   // Validate the password

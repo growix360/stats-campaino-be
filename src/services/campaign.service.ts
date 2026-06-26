@@ -1,25 +1,25 @@
+import httpStatus from "http-status"
+import ApiError from "../utils/ApiError"
 import { Prisma as PrismaDB2 } from "../../generated/client2"
 import { Prisma as PrismaDB1 } from "../../generated/client1"
+import { User } from "../../generated/client1"
 import { prismaDB1, prismaDB2 } from "../client"
 import { mapCampaignToApi } from "../utils/fieldMapping"
+import { buildCampaignScope, getAccessibleCampaignIds } from "../utils/accessControl"
 
 const getCampaigns = async (payload: {
-  userId: string
+  user: User
   page: number
   limit: number
   search: string
   sortBy: keyof PrismaDB1.CampaignOrderByWithRelationInput
   sortDirection?: PrismaDB1.SortOrder
 }) => {
-  const user = await prismaDB1.user.findUnique({ where: { id: payload.userId } })
-  if (!user) {
-    throw new Error("User not found")
-  }
-
+  const scope = await buildCampaignScope(payload.user)
   const skip = (payload.page - 1) * payload.limit
 
   const whereCondition: PrismaDB1.CampaignWhereInput = {
-    deletedAt: null,
+    ...scope,
     ...(payload.search
       ? {
           OR: [
@@ -57,7 +57,7 @@ const getCampaigns = async (payload: {
 }
 
 const getCampaignsUpdateStatus = async (payload: {
-  userId: string
+  user: User
   page: number
   limit: number
   search: string
@@ -65,11 +65,7 @@ const getCampaignsUpdateStatus = async (payload: {
   sortDirection?: PrismaDB2.SortOrder
   campaignId?: string
 }) => {
-  const user = await prismaDB1.user.findUnique({ where: { id: payload.userId } })
-  if (!user) {
-    throw new Error("User not found")
-  }
-
+  const accessibleCampaignIds = await getAccessibleCampaignIds(payload.user)
   const skip = (payload.page - 1) * payload.limit
 
   const orderByCondition: PrismaDB2.CampaignUpdateHistoryOrderByWithRelationInput = {
@@ -83,7 +79,15 @@ const getCampaignsUpdateStatus = async (payload: {
           OR: [{ name: { contains: payload.search, mode: "insensitive" } }],
         }
       : {}),
-    ...(payload.campaignId ? { campaignId: payload.campaignId } : {}),
+  }
+
+  if (payload.campaignId) {
+    if (accessibleCampaignIds && !accessibleCampaignIds.includes(payload.campaignId)) {
+      throw new ApiError(httpStatus.FORBIDDEN, "Forbidden")
+    }
+    whereCondition.campaignId = payload.campaignId
+  } else if (accessibleCampaignIds) {
+    whereCondition.campaignId = { in: accessibleCampaignIds }
   }
 
   const campaigns = await prismaDB2.campaignUpdateHistory.findMany({
