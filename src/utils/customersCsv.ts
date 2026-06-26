@@ -1,5 +1,7 @@
 import fs from "fs"
 import path from "path"
+import httpStatus from "http-status"
+import ApiError from "./ApiError"
 import { dedupeAgainstExisting, isValidEmail } from "./emailFileParsing"
 
 interface LineIndex {
@@ -47,7 +49,10 @@ const buildLineIndex = (filePath: string): LineIndex[] => {
 const ensureIndex = (): LineIndex[] => {
   const filePath = getCustomersCsvPath()
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Customers CSV not found at ${filePath}`)
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      `Default email pool unavailable (customers CSV missing at ${filePath}). Upload a .csv/.txt file when increasing sent, or set CUSTOMERS_CSV_PATH on the server.`,
+    )
   }
 
   if (lineIndex && indexedPath === filePath) {
