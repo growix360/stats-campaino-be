@@ -1,16 +1,16 @@
 import passport from "passport"
 import httpStatus from "http-status"
 import ApiError from "../utils/ApiError"
-// import { roleRights } from "../config/roles"
+import { normalizeRoles } from "../utils/fieldMapping"
 import { NextFunction, Request, Response } from "express"
-import { User } from "../../generated/client1"
+import { Role, User } from "../../generated/client1"
 
 const verifyCallback =
   (
     req: Request,
     resolve: (value?: unknown) => void,
     reject: (reason?: unknown) => void,
-    requiredRights: string[],
+    requiredRoles: Role[],
   ) =>
   async (err: unknown, user: User | false, info: unknown) => {
     if (err || info || !user) {
@@ -18,28 +18,23 @@ const verifyCallback =
     }
     req.user = user
 
-    if (requiredRights.length) {
-      // const userRights = roleRights.get(user.role) ?? []
-      // const hasRequiredRights = requiredRights.every((requiredRight) =>
-      //   userRights.includes(requiredRight)
-      // )
-      // if (!hasRequiredRights && req.params.userId !== user.id) {
-      //   return reject(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
-      // }
+    if (requiredRoles.length && !requiredRoles.includes(user.role)) {
+      return reject(new ApiError(httpStatus.FORBIDDEN, "Forbidden"))
     }
 
     resolve()
   }
 
 const auth =
-  (...requiredRights: string[]) =>
+  (...requiredRoles: (Role | string)[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
+    const roles = requiredRoles.length ? normalizeRoles(...requiredRoles) : []
+
     return new Promise((resolve, reject) => {
       passport.authenticate(
         "jwt",
         { session: false },
-
-        verifyCallback(req, resolve, reject, requiredRights),
+        verifyCallback(req, resolve, reject, roles),
       )(req, res, next)
     })
       .then(() => next())

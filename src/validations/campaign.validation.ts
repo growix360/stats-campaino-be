@@ -3,20 +3,23 @@ import {
   allowedGetAllCampaignSortFields,
   allowedGetAllCampaignUpdatesSortFields,
 } from "../types/campaign"
+import { CampaignStatsTargets } from "../types/stats"
+
+const optionalInteger = Joi.number().integer().min(0).optional()
+
+const updateStatsBodySchema = Joi.object({
+  campaignId: Joi.string().guid({ version: "uuidv4" }).required(),
+  sent: optionalInteger,
+  delivered: optionalInteger,
+  uniqueOpens: optionalInteger,
+  totalOpens: optionalInteger,
+  uniqueClicks: optionalInteger,
+  totalClicks: optionalInteger,
+}).or("sent", "delivered", "uniqueOpens", "totalOpens", "uniqueClicks", "totalClicks")
 
 const getCampaignStats = {
   params: Joi.object().keys({
     campaignId: Joi.string().required(),
-  }),
-}
-const addStats = {
-  body: Joi.object().keys({
-    campaignId: Joi.string().guid().required(),
-    delivered: Joi.number().integer().min(0).required(),
-    opens: Joi.number().integer().min(0).required(),
-    uniqueOpens: Joi.number().integer().min(0).required(),
-    clicks: Joi.number().integer().min(0).required(),
-    uniqueClicks: Joi.number().integer().min(0).required(),
   }),
 }
 
@@ -45,9 +48,43 @@ const getAllCampaign = {
   }),
 }
 
+const parseOptionalInteger = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+  const parsed = Number(value)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+export const parseUpdateStatsBody = (body: Record<string, unknown>): {
+  campaignId: string
+  targets: CampaignStatsTargets
+} => {
+  const normalized = {
+    campaignId: body.campaignId,
+    sent: parseOptionalInteger(body.sent),
+    delivered: parseOptionalInteger(body.delivered),
+    uniqueOpens: parseOptionalInteger(body.uniqueOpens),
+    totalOpens: parseOptionalInteger(body.totalOpens),
+    uniqueClicks: parseOptionalInteger(body.uniqueClicks),
+    totalClicks: parseOptionalInteger(body.totalClicks),
+  }
+
+  const { value, error } = updateStatsBodySchema.validate(normalized, {
+    abortEarly: false,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  const { campaignId, ...targets } = value
+  return { campaignId, targets }
+}
+
 export default {
-  getCampaignStats: getCampaignStats,
-  addStats,
+  getCampaignStats,
   getAllCampaignUpdates,
   getAllCampaign,
+  updateStatsBodySchema,
 }

@@ -17,9 +17,10 @@ model Campaign {
   ctaText         String    @default("Click Here")
   emailBody       String
   emailListId     String?
+  domainId        String?
   createdBy       String
   templateName    String
-  templateId      String // Reference to the template used
+  templateId      String
   hasCompleted    Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -31,7 +32,39 @@ model Campaign {
 
   createdByUser User       @relation("UserCampaigns", fields: [createdBy], references: [id])
   emailList     EmailList? @relation(fields: [emailListId], references: [id])
-  template      Template?  @relation(fields: [templateId], references: [id]) // Relation to Template model
+  template      Template?  @relation(fields: [templateId], references: [id])
+  domain        Domain?    @relation(fields: [domainId], references: [id])
+
+  @@index([domainId])
+}
+
+model Domain {
+  id        String    @id @default(uuid())
+  fromEmail String
+  fromName  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  campaigns   Campaign[]
+  userDomains UserDomain[]
+
+  @@index([fromEmail])
+}
+
+model UserDomain {
+  id        String   @id @default(uuid())
+  userId    String
+  domainId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  domain Domain @relation(fields: [domainId], references: [id])
+
+  @@unique([userId, domainId])
+  @@index([userId])
+  @@index([domainId])
 }
 
 model EmailList {
@@ -51,17 +84,18 @@ model EmailList {
 }
 
 model User {
-  id               String     @id @default(uuid())
+  id               String       @id @default(uuid())
   name             String
-  email            String     @unique()
+  email            String       @unique()
   password         String
-  role             Role       @default(USER)
+  role             Role         @default(USER)
   phone            String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
   deletedAt        DateTime?
-  campaigns        Campaign[] @relation("UserCampaigns")
-  createdTemplates Template[] @relation("UserTemplates")
+  campaigns        Campaign[]   @relation("UserCampaigns")
+  createdTemplates Template[]   @relation("UserTemplates")
+  userDomains      UserDomain[]
 }
 
 model Email {

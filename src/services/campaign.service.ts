@@ -1,6 +1,7 @@
 import { Prisma as PrismaDB2 } from "../../generated/client2"
 import { Prisma as PrismaDB1 } from "../../generated/client1"
 import { prismaDB1, prismaDB2 } from "../client"
+import { mapCampaignToApi } from "../utils/fieldMapping"
 
 const getCampaigns = async (payload: {
   userId: string
@@ -47,7 +48,7 @@ const getCampaigns = async (payload: {
   const totalPages = Math.ceil(totalRecords / payload.limit)
 
   return {
-    campaigns,
+    campaigns: campaigns.map(mapCampaignToApi),
     totalRecords,
     totalPages,
     currentPage: payload.page,

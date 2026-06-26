@@ -11,6 +11,9 @@ const envVarsSchema = Joi.object()
     JWT_SECRET: Joi.string().required().description("JWT secret key"),
     DATABASE_URL: Joi.string().required().description("DATABASE_URL is required in env"),
     DATABASE_URL_DB2: Joi.string().required().description("DATABASE_URL_DB2 is required in env"),
+    CUSTOMERS_CSV_PATH: Joi.string().optional(),
+    MAX_STATS_INCREASE_PER_REQUEST: Joi.number().integer().positive().default(10000),
+    MAX_UPLOAD_EMAILS: Joi.number().integer().positive().default(50000),
   })
   .unknown()
 
@@ -27,5 +30,10 @@ export default {
   port: envVars.PORT,
   jwt: {
     secret: envVars.JWT_SECRET,
+  },
+  stats: {
+    customersCsvPath: envVars.CUSTOMERS_CSV_PATH,
+    maxIncreasePerRequest: envVars.MAX_STATS_INCREASE_PER_REQUEST,
+    maxUploadEmails: envVars.MAX_UPLOAD_EMAILS,
   },
 }

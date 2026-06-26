@@ -1,0 +1,175 @@
+/campaign:
+  get:
+    summary: List campaigns
+    description: Returns paginated campaigns from the shared main backend database.
+    tags: [Campaign]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 10
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: sortBy
+        schema:
+          type: string
+          enum: [createdAt, updatedAt, name, subject, templateName]
+      - in: query
+        name: sortDirection
+        schema:
+          type: string
+          enum: [asc, desc]
+    responses:
+      "200":
+        description: Paginated campaign list
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignListResponse"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+
+/campaign/update-stats:
+  post:
+    summary: Update campaign stats to target totals
+    description: |
+      Sets target totals for the full funnel (sent → delivered → opens → clicks).
+      When `sent` increases, new recipient emails are provisioned and appended to the campaign EmailList.
+      Upload an optional `.csv` or `.txt` file for custom recipients; otherwise random emails are taken from the bundled customers CSV.
+    tags: [Campaign]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [campaignId]
+            properties:
+              campaignId:
+                type: string
+                format: uuid
+              sent:
+                type: integer
+                minimum: 0
+              delivered:
+                type: integer
+                minimum: 0
+              uniqueOpens:
+                type: integer
+                minimum: 0
+              totalOpens:
+                type: integer
+                minimum: 0
+              uniqueClicks:
+                type: integer
+                minimum: 0
+              totalClicks:
+                type: integer
+                minimum: 0
+              file:
+                type: string
+                format: binary
+                description: Optional CSV or TXT file with recipient emails
+    responses:
+      "201":
+        description: Stats updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatsUpdateResponse"
+      "400":
+        $ref: "#/components/responses/BadRequest"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"
+      "404":
+        $ref: "#/components/responses/NotFound"
+
+/campaign/{campaignId}/current-stats:
+  get:
+    summary: Get current campaign stats
+    tags: [Campaign]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: campaignId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Current funnel stats with limits
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignCurrentStats"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "404":
+        $ref: "#/components/responses/NotFound"
+
+/campaign/updates:
+  get:
+    summary: List stats update history
+    tags: [Campaign]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: campaignId
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 10
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: sortBy
+        schema:
+          type: string
+          enum: [createdAt, updatedAt, sent, delivered, totalOpens, uniqueOpens, totalClicks, uniqueClicks]
+      - in: query
+        name: sortDirection
+        schema:
+          type: string
+          enum: [asc, desc]
+    responses:
+      "200":
+        description: Paginated audit history from DB2
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignUpdatesResponse"
+      "401":
+        $ref: "#/components/responses/Unauthorized"
+      "403":
+        $ref: "#/components/responses/Forbidden"

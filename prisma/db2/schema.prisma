@@ -14,10 +14,11 @@ model CampaignUpdateHistory {
   id           String @id @default(uuid())
   campaignId   String
   name         String
+  sent         Int    @default(0)
   delivered    Int    @default(0)
-  opens        Int    @default(0)
+  totalOpens   Int    @default(0)
   uniqueOpens  Int    @default(0)
-  clicks       Int    @default(0)
+  totalClicks  Int    @default(0)
   uniqueClicks Int    @default(0)
 
   createdAt DateTime  @default(now())

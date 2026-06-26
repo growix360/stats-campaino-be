@@ -1,155 +1,163 @@
+import httpStatus from "http-status"
 import { EmailStatus } from "../../generated/client1"
 import { prismaDB1 as prisma, prismaDB2 } from "../client"
+import ApiError from "../utils/ApiError"
 import {
   Default_UserAgent,
   Default_UserIP,
   getRandomUserAgent,
   getRandomUserIP,
 } from "../utils/UserAgents"
+import {
+  buildLimits,
+  buildProjectedPools,
+  computeDeltas,
+  resolveTargets,
+  validateStatsUpdate,
+} from "../utils/statsValidation"
+import emailProvisioningService from "./emailProvisioning.service"
+import {
+  CampaignStatsSnapshot,
+  CampaignStatsTargets,
+  EmailSource,
+} from "../types/stats"
 
-const addStatsEvents = async (payload: {
-  campaignId: string
-  opens: number
-  uniqueOpens: number
-  clicks: number
-  uniqueClicks: number
-  delivered: number
-}) => {
-  try {
-    const campaign = await prisma.campaign.findUnique({ where: { id: payload.campaignId } })
-    if (!campaign) {
-      throw new Error("Campaign not found")
-    }
+const BATCH_SIZE = 1000
 
-    // Fetch all campaign emails
-    const allEmails = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId },
-      select: { id: true },
-    })
+const shuffle = <T>(items: T[]): T[] => [...items].sort(() => 0.5 - Math.random())
 
-    if (allEmails.length === 0) {
-      throw new Error(
-        `No processed emails found for campaign ${payload.campaignId}. Cannot add stats.`,
-      )
-    }
-    // Get emails that haven't been opened yet (for unique opens)
-    const emailsWithoutOpens = await prisma.email.findMany({
-      where: { campaignId: payload.campaignId, openEvents: { none: {} } },
-      select: { id: true },
-    })
+const pickRandomIds = (items: { id: string }[], count: number): string[] =>
+  shuffle(items)
+    .slice(0, count)
+    .map((item) => item.id)
 
-    // Get emails that haven't been clicked yet (for unique clicks)
-    const emailsWithoutClicks = await prisma.email.findMany({
-      where: {
-        campaignId: payload.campaignId,
-        clickEvents: { none: {} },
+const countSent = async (campaignId: string): Promise<number> =>
+  prisma.email.count({
+    where: { campaignId, deletedAt: null },
+  })
+
+const countDelivered = async (campaignId: string): Promise<number> =>
+  prisma.email.count({
+    where: {
+      campaignId,
+      deletedAt: null,
+      deliveryStatus: {
+        in: [EmailStatus.DELIVERED, EmailStatus.OPENED, EmailStatus.CLICKED],
       },
-      select: { id: true },
-    })
+    },
+  })
 
-    const emailsNotDelivered = await prisma.email.findMany({
-      where: {
-        campaignId: payload.campaignId,
-        deliveryStatus: { in: [EmailStatus.SENT, EmailStatus.UNSENT] },
+const countUniqueOpens = async (campaignId: string): Promise<number> => {
+  const grouped = await prisma.open.groupBy({
+    by: ["emailId"],
+    where: { campaignId },
+  })
+  return grouped.length
+}
+
+const countTotalOpens = async (campaignId: string): Promise<number> =>
+  prisma.open.count({ where: { campaignId } })
+
+const countUniqueClicks = async (campaignId: string): Promise<number> => {
+  const grouped = await prisma.click.groupBy({
+    by: ["emailId"],
+    where: { campaignId },
+  })
+  return grouped.length
+}
+
+const countTotalClicks = async (campaignId: string): Promise<number> =>
+  prisma.click.count({ where: { campaignId } })
+
+const buildSnapshot = async (campaignId: string): Promise<CampaignStatsSnapshot> => ({
+  sent: await countSent(campaignId),
+  delivered: await countDelivered(campaignId),
+  uniqueOpens: await countUniqueOpens(campaignId),
+  totalOpens: await countTotalOpens(campaignId),
+  uniqueClicks: await countUniqueClicks(campaignId),
+  totalClicks: await countTotalClicks(campaignId),
+})
+
+const fetchDbPools = async (campaignId: string) => {
+  const deliverableSent = await prisma.email.findMany({
+    where: {
+      campaignId,
+      deletedAt: null,
+      deliveryStatus: EmailStatus.SENT,
+    },
+    select: { id: true },
+  })
+
+  const openableDelivered = await prisma.email.findMany({
+    where: {
+      campaignId,
+      deletedAt: null,
+      deliveryStatus: {
+        in: [EmailStatus.DELIVERED, EmailStatus.OPENED, EmailStatus.CLICKED],
       },
-      select: { id: true },
-    })
+      openEvents: { none: {} },
+    },
+    select: { id: true },
+  })
 
-    const selectedForDelivered = emailsNotDelivered
-      .sort(() => 0.5 - Math.random())
-      .slice(0, payload.delivered)
+  const repeatableOpens = await prisma.email.findMany({
+    where: {
+      campaignId,
+      deletedAt: null,
+      openEvents: { some: {} },
+    },
+    select: { id: true },
+  })
 
-    // Select random emails for unique opens and unique clicks
-    const selectedForUniqueOpens = emailsWithoutOpens
-      .sort(() => 0.5 - Math.random())
-      .slice(0, payload.uniqueOpens)
+  const clickableOpened = await prisma.email.findMany({
+    where: {
+      campaignId,
+      deletedAt: null,
+      openEvents: { some: {} },
+      clickEvents: { none: {} },
+    },
+    select: { id: true },
+  })
 
-    const selectedForUniqueClicks = emailsWithoutClicks
-      .sort(() => 0.5 - Math.random())
-      .slice(0, payload.uniqueClicks)
+  const repeatableClicks = await prisma.email.findMany({
+    where: {
+      campaignId,
+      deletedAt: null,
+      clickEvents: { some: {} },
+    },
+    select: { id: true },
+  })
 
-    // Generate unique open events
-    const uniqueOpenEvents = selectedForUniqueOpens.map((email) => ({
-      emailId: email.id,
-      campaignId: payload.campaignId,
-      ipAddress: getRandomUserIP(),
-      userAgent: getRandomUserAgent(),
-    }))
+  return {
+    deliverableSent: deliverableSent.length,
+    openableDelivered: openableDelivered.length,
+    repeatableOpens: repeatableOpens.length,
+    clickableOpened: clickableOpened.length,
+    repeatableClicks: repeatableClicks.length,
+    deliverableSentRows: deliverableSent,
+    openableDeliveredRows: openableDelivered,
+    clickableOpenedRows: clickableOpened,
+    repeatableOpensRows: repeatableOpens,
+    repeatableClicksRows: repeatableClicks,
+  }
+}
 
-    // Generate additional open events (randomly assigned to any email)
-    const allOpenEvents = Array.from({ length: payload.opens }, () => ({
-      emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
-      campaignId: payload.campaignId,
-      ipAddress: Default_UserIP,
-      userAgent: Default_UserAgent,
-    })).filter((event) => event.emailId) // Remove any undefined values
-
-    // Generate unique click events
-    const uniqueClickEvents = selectedForUniqueClicks.map((email) => ({
-      emailId: email.id,
-      campaignId: payload.campaignId,
-      ipAddress: getRandomUserIP(),
-      userAgent: getRandomUserAgent(),
-    }))
-    console.log("\n🚀 ~\n uniqueClickEvents:\t", uniqueClickEvents)
-
-    // Generate additional click events (randomly assigned to any email)
-    const allClickEvents = Array.from({ length: payload.clicks }, () => ({
-      emailId: allEmails[Math.floor(Math.random() * allEmails.length)]?.id, // Randomly pick any email
-      campaignId: payload.campaignId,
-      ipAddress: Default_UserIP,
-      userAgent: Default_UserAgent,
-    })).filter((event) => event.emailId)
-
-    // Insert events into the database
-    const transactionOps = [
-      prisma.open.createMany({ data: uniqueOpenEvents }),
-      prisma.open.createMany({ data: allOpenEvents }),
-      prisma.click.createMany({ data: uniqueClickEvents }),
-      prisma.click.createMany({ data: allClickEvents }),
-    ]
-
-    if (selectedForDelivered.length > 0) {
-      transactionOps.push(
-        prisma.email.updateMany({
-          where: { id: { in: selectedForDelivered.map((email) => email.id) } },
-          data: {
-            deliveryStatus: EmailStatus.DELIVERED,
-            message: "Marked delivered via stats manager",
-          },
-        }),
-      )
-    }
-
-    await prisma.$transaction(transactionOps)
-
-    console.log(
-      `Added ${selectedForDelivered.length} delivered, ${uniqueOpenEvents.length} unique opens, ${allOpenEvents.length} total opens, ${uniqueClickEvents.length} unique clicks, and ${allClickEvents.length} total clicks to campaign ${payload.campaignId}`,
-    )
-
-    await prismaDB2.campaignUpdateHistory.create({
-      data: {
-        name: campaign.name,
-        campaignId: payload.campaignId,
-        delivered: selectedForDelivered.length,
-        opens: payload.opens,
-        uniqueOpens: payload.uniqueOpens,
-        clicks: payload.clicks,
-        uniqueClicks: payload.uniqueClicks,
-        createdAt: new Date(),
-      },
-    })
-
-    return {
-      delivered: selectedForDelivered.length,
-      uniqueOpens: uniqueOpenEvents.length,
-      totalOpens: allOpenEvents.length,
-      uniqueClicks: uniqueClickEvents.length,
-      totalClicks: allClickEvents.length,
-    }
-  } catch (error) {
-    console.error("Error adding events:", error)
-    throw error
+const createEventsInBatches = async (
+  createMany: (data: {
+    emailId: string
+    campaignId: string
+    ipAddress: string
+    userAgent: string
+  }[]) => Promise<unknown>,
+  events: {
+    emailId: string
+    campaignId: string
+    ipAddress: string
+    userAgent: string
+  }[],
+) => {
+  for (let i = 0; i < events.length; i += BATCH_SIZE) {
+    await createMany(events.slice(i, i + BATCH_SIZE))
   }
 }
 
@@ -160,47 +168,254 @@ const getCurrentStats = async (campaignId: string) => {
   })
 
   if (!campaign) {
-    throw new Error("Campaign not found")
+    throw new ApiError(httpStatus.NOT_FOUND, "Campaign not found")
   }
 
-  const totalEmails = await prisma.email.count({
-    where: { campaignId },
-  })
-
-  const totalOpens = await prisma.open.count({
-    where: { campaignId },
-  })
-
-  const uniqueOpens = await prisma.open.groupBy({
-    by: ["emailId"],
-    where: { campaignId },
-  })
-
-  const totalClicks = await prisma.click.count({
-    where: { campaignId },
-  })
-
-  const uniqueClicks = await prisma.click.groupBy({
-    by: ["emailId"],
-    where: { campaignId },
-  })
-
-  const totalDelivered = await prisma.email.count({
-    where: { campaignId, deliveryStatus: EmailStatus.DELIVERED },
+  const snapshot = await buildSnapshot(campaignId)
+  const dbPools = await fetchDbPools(campaignId)
+  const limits = buildLimits(snapshot, {
+    sentFromSource: 0,
+    deliverableSent: dbPools.deliverableSent,
+    openableDelivered: dbPools.openableDelivered,
+    repeatableOpens: dbPools.repeatableOpens,
+    clickableOpened: dbPools.clickableOpened,
+    repeatableClicks: dbPools.repeatableClicks,
   })
 
   return {
     campaignId: campaign.id,
     name: campaign.name,
     hasCompleted: campaign.hasCompleted,
-    totalEmails,
-    totalDelivered,
-    totalOpens,
-    uniqueOpens: uniqueOpens.length,
-    totalClicks,
-    uniqueClicks: uniqueClicks.length,
+    ...snapshot,
+    limits,
   }
 }
 
-export default { addStatsEvents, getCurrentStats }
+const updateStats = async (payload: {
+  campaignId: string
+  targets: CampaignStatsTargets
+  userId: string
+  upload?: { buffer: Buffer; originalname: string }
+  maxIncrease: number
+  maxUploadEmails: number
+}) => {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: payload.campaignId, deletedAt: null },
+    select: { id: true, name: true, emailListId: true },
+  })
 
+  if (!campaign) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Campaign not found")
+  }
+
+  const before = await buildSnapshot(payload.campaignId)
+  const provisionalResolved = resolveTargets(before, payload.targets)
+  const provisionalDeltas = computeDeltas(before, provisionalResolved)
+
+  let emailSource: EmailSource = "none"
+  const warnings: string[] = []
+
+  let resolvedNewEmails: string[] = []
+  if (provisionalDeltas.sent > 0) {
+    const resolved = await emailProvisioningService.resolveNewEmails({
+      campaignId: payload.campaignId,
+      count: provisionalDeltas.sent,
+      upload: payload.upload,
+      maxUploadEmails: payload.maxUploadEmails,
+    })
+    resolvedNewEmails = resolved.emails
+    emailSource = resolved.source
+    warnings.push(...resolved.warnings)
+  }
+
+  const dbPools = await fetchDbPools(payload.campaignId)
+  const projectedPools = buildProjectedPools(
+    {
+      deliverableSent: dbPools.deliverableSent,
+      openableDelivered: dbPools.openableDelivered,
+      repeatableOpens: dbPools.repeatableOpens,
+      clickableOpened: dbPools.clickableOpened,
+      repeatableClicks: dbPools.repeatableClicks,
+    },
+    provisionalDeltas,
+    resolvedNewEmails.length,
+  )
+
+  const { deltas } = validateStatsUpdate({
+    current: before,
+    targets: payload.targets,
+    pools: projectedPools,
+    maxIncrease: payload.maxIncrease,
+  })
+
+  const repeatOpenDelta = deltas.totalOpens
+  const repeatClickDelta = deltas.totalClicks
+
+  await prisma.$transaction(async (tx) => {
+    if (deltas.sent > 0) {
+      await emailProvisioningService.provisionSentEmails(tx, {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        emailListId: campaign.emailListId,
+        emails: resolvedNewEmails,
+      })
+    }
+
+    if (deltas.delivered > 0) {
+      const refreshedDeliverable = await tx.email.findMany({
+        where: {
+          campaignId: payload.campaignId,
+          deletedAt: null,
+          deliveryStatus: EmailStatus.SENT,
+        },
+        select: { id: true },
+      })
+
+      const deliveredIds = pickRandomIds(refreshedDeliverable, deltas.delivered)
+      await tx.email.updateMany({
+        where: { id: { in: deliveredIds } },
+        data: {
+          deliveryStatus: EmailStatus.DELIVERED,
+          message: "Marked delivered via stats manager",
+        },
+      })
+    }
+
+    if (deltas.uniqueOpens > 0) {
+      const openableRows = await tx.email.findMany({
+        where: {
+          campaignId: payload.campaignId,
+          deletedAt: null,
+          deliveryStatus: {
+            in: [EmailStatus.DELIVERED, EmailStatus.OPENED, EmailStatus.CLICKED],
+          },
+          openEvents: { none: {} },
+        },
+        select: { id: true },
+      })
+
+      const uniqueOpenIds = pickRandomIds(openableRows, deltas.uniqueOpens)
+      const uniqueOpenEvents = uniqueOpenIds.map((emailId) => ({
+        emailId,
+        campaignId: payload.campaignId,
+        ipAddress: getRandomUserIP(),
+        userAgent: getRandomUserAgent(),
+      }))
+
+      await createEventsInBatches(
+        (data) => tx.open.createMany({ data }),
+        uniqueOpenEvents,
+      )
+
+      await tx.email.updateMany({
+        where: { id: { in: uniqueOpenIds } },
+        data: { deliveryStatus: EmailStatus.OPENED },
+      })
+    }
+
+    if (repeatOpenDelta > 0) {
+      const openers = await tx.email.findMany({
+        where: {
+          campaignId: payload.campaignId,
+          deletedAt: null,
+          openEvents: { some: {} },
+        },
+        select: { id: true },
+      })
+
+      const repeatOpenEvents = Array.from({ length: repeatOpenDelta }, () => ({
+        emailId: openers[Math.floor(Math.random() * openers.length)]!.id,
+        campaignId: payload.campaignId,
+        ipAddress: Default_UserIP,
+        userAgent: Default_UserAgent,
+      }))
+
+      await createEventsInBatches(
+        (data) => tx.open.createMany({ data }),
+        repeatOpenEvents,
+      )
+    }
+
+    if (deltas.uniqueClicks > 0) {
+      const clickableRows = await tx.email.findMany({
+        where: {
+          campaignId: payload.campaignId,
+          deletedAt: null,
+          openEvents: { some: {} },
+          clickEvents: { none: {} },
+        },
+        select: { id: true },
+      })
+
+      const uniqueClickIds = pickRandomIds(clickableRows, deltas.uniqueClicks)
+      const uniqueClickEvents = uniqueClickIds.map((emailId) => ({
+        emailId,
+        campaignId: payload.campaignId,
+        ipAddress: getRandomUserIP(),
+        userAgent: getRandomUserAgent(),
+      }))
+
+      await createEventsInBatches(
+        (data) => tx.click.createMany({ data }),
+        uniqueClickEvents,
+      )
+
+      await tx.email.updateMany({
+        where: { id: { in: uniqueClickIds } },
+        data: { deliveryStatus: EmailStatus.CLICKED },
+      })
+    }
+
+    if (repeatClickDelta > 0) {
+      const clickers = await tx.email.findMany({
+        where: {
+          campaignId: payload.campaignId,
+          deletedAt: null,
+          clickEvents: { some: {} },
+        },
+        select: { id: true },
+      })
+
+      const repeatClickEvents = Array.from({ length: repeatClickDelta }, () => ({
+        emailId: clickers[Math.floor(Math.random() * clickers.length)]!.id,
+        campaignId: payload.campaignId,
+        ipAddress: Default_UserIP,
+        userAgent: Default_UserAgent,
+      }))
+
+      await createEventsInBatches(
+        (data) => tx.click.createMany({ data }),
+        repeatClickEvents,
+      )
+    }
+  })
+
+  const after = await buildSnapshot(payload.campaignId)
+
+  await prismaDB2.campaignUpdateHistory.create({
+    data: {
+      campaignId: payload.campaignId,
+      name: campaign.name,
+      userId: payload.userId,
+      sent: deltas.sent,
+      delivered: deltas.delivered,
+      totalOpens: deltas.totalOpens,
+      uniqueOpens: deltas.uniqueOpens,
+      totalClicks: deltas.totalClicks,
+      uniqueClicks: deltas.uniqueClicks,
+    },
+  })
+
+  return {
+    before,
+    after,
+    applied: deltas,
+    emailSource,
+    warnings,
+  }
+}
+
+export default {
+  getCurrentStats,
+  updateStats,
+}

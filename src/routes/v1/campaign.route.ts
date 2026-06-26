@@ -3,12 +3,18 @@ import validate from "../../middlewares/validate"
 import { campaignValidation } from "../../validations"
 import { campaignController } from "../../controllers"
 import auth from "../../middlewares/auth"
+import { statsUpload } from "../../utils/fileUpload"
+import { Role } from "../../../generated/client1"
 
 const router = express.Router()
 
 router
-  .route("/add-stats")
-  .post(auth(), validate(campaignValidation.addStats), campaignController.addStats)
+  .route("/update-stats")
+  .post(
+    auth(Role.ADMIN, Role.MANAGER),
+    statsUpload.single("file"),
+    campaignController.updateStats,
+  )
 
 router
   .route("/:campaignId/current-stats")
@@ -17,13 +23,13 @@ router
 router
   .route("/updates")
   .get(
-    auth("ADMIN"),
+    auth(Role.ADMIN),
     validate(campaignValidation.getAllCampaignUpdates),
     campaignController.getCampaignsUpdateStatus,
   )
 
 router
   .route("/")
-  .get(auth("ADMIN"), validate(campaignValidation.getAllCampaign), campaignController.getCampaigns)
+  .get(auth(Role.ADMIN), validate(campaignValidation.getAllCampaign), campaignController.getCampaigns)
 
 export default router
