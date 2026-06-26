@@ -53,7 +53,6 @@ model Domain {
 }
 
 model UserDomain {
-  id        String   @id @default(uuid())
   userId    String
   domainId  String
   createdAt DateTime @default(now())
@@ -62,7 +61,7 @@ model UserDomain {
   user   User   @relation(fields: [userId], references: [id])
   domain Domain @relation(fields: [domainId], references: [id])
 
-  @@unique([userId, domainId])
+  @@id([userId, domainId])
   @@index([userId])
   @@index([domainId])
 }

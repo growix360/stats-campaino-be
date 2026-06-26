@@ -35,6 +35,7 @@ HTTP Request
 **Rules:**
 - Never write audit history to DB1 or campaign data to DB2 (except `CampaignUpdateHistory`)
 - DB1 schema changes must be coordinated with the main Campaino backend
+- `UserDomain` uses composite primary key `(userId, domainId)` — no separate `id` column (matches main backend)
 - Import types from `generated/client1` or `generated/client2` — **not** `@prisma/client`
 - Use `config` from `src/config/config.ts` for env values — **not** raw `process.env`
 
