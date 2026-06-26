@@ -262,7 +262,7 @@ const updateStats = async (payload: {
     if (isPrismaClientError(error)) {
       throw new ApiError(
         httpStatus.SERVICE_UNAVAILABLE,
-        "Audit database schema is out of date. Run: yarn prisma:migrate:db2",
+        "Audit database schema is out of date. Run: yarn db:push:db2",
       )
     }
     throw error

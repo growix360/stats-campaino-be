@@ -13,4 +13,4 @@ Read [AGENTS.md](../../AGENTS.md) for full context. Critical rules:
 4. **RBAC** — enforce in services via `accessControl.ts`; ADMIN=all, MANAGER=assigned domains
 5. **Stats update** — DB2 audit row created before DB1 transaction; rollback audit on failure
 6. **JWT** — shared secret with main Campaino backend; only ADMIN/MANAGER can login
-7. **DB1 migrations** — coordinate with main backend before changing shared schema
+7. **DB1** — shared schema; use `db:push` only, coordinate changes with main backend. **DB2** — use `db:push:db2` or `db:reset:db2`

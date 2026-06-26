@@ -27,7 +27,7 @@ DB2 (DATABASE_URL_DB2) → Local stats audit log
 ```
 
 - **JWT_SECRET** in `.env` must match the main backend so users can authenticate against shared `User` records in DB1.
-- DB1 schema is kept in sync with the main backend via migrations (see `prisma/migrations/20250616130000_sync_with_main_backend/`).
+- DB1 schema is kept in sync with the main backend via `yarn db:push` (no migration files in this repo).
 - Legacy Selzy ID columns (`selzyCampaignId`, `selzyListId`, etc.) were removed from DB1 in favor of the main backend's native IDs.
 
 ### This repo's endpoints
@@ -379,7 +379,7 @@ npm run lint         # ESLint
 ## Checklist: Syncing This Repo After Main Backend Changes
 
 1. Compare `prisma/schema.prisma` on main backend vs `prisma/schema.prisma` (DB1) here.
-2. Add a migration under `prisma/migrations/` if DB1 columns/models changed.
+2. Update `prisma/schema.prisma` if DB1 columns/models changed, then run `yarn db:push`.
 3. Run `yarn prisma:generate` to regenerate `generated/client1`.
 4. Confirm `JWT_SECRET` still matches main backend.
 5. Update services that read/write shared models (`campaign.service.ts`, `campaignStats.service.ts`).

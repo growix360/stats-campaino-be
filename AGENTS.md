@@ -64,8 +64,8 @@ src/
   utils/                # accessControl, statsValidation, fileUpload, ApiError
   docs/                 # Swagger YAML (paths/, components.yml)
   __tests__/            # Unit + integration tests
-prisma/                 # DB1 schema + migrations
-prisma/db2/             # DB2 schema + migrations
+prisma/                 # DB1 schema (db push)
+prisma/db2/             # DB2 schema (db push)
 generated/client1|2     # Prisma client output (gitignored, build-time)
 docs/                   # Human docs (frontend guides, API reference)
 ```
@@ -159,7 +159,9 @@ Integration tests require Docker. Unit tests mock Prisma where needed.
 
 ## Do not touch without coordination
 
-- `prisma/migrations/` for DB1 when main backend owns the shared schema
+- **DB1** (`DATABASE_URL`) is shared with the main Campaino backend — never run `db:reset` on production DB1
+- Use `yarn db:push` to sync DB1 schema; coordinate schema changes with the main backend team
+- **DB2** (`DATABASE_URL_DB2`) is owned by this service — safe to `db:reset:db2` when wiping audit history
 - `JWT_SECRET` contract with main backend
 - Removing `domainId` scoping without product approval
 

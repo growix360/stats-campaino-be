@@ -34,7 +34,8 @@ Swagger UI: `GET /v1/docs` (disable in production with `ENABLE_SWAGGER=false`)
 
 - Schemas: [`prisma/schema.prisma`](prisma/schema.prisma), [`prisma/db2/schema.prisma`](prisma/db2/schema.prisma)
 - Generated clients: `generated/client1`, `generated/client2`
-- **DB1 migrations** must stay aligned with the main backend — coordinate schema changes.
+- **No migrations** — schemas are applied with `prisma db push`
+- **DB1** is shared with the main backend — coordinate schema changes; never `db:reset` on production DB1
 
 ## Environment variables
 
@@ -96,6 +97,8 @@ yarn lint             # ESLint
 yarn db:push          # push DB1 schema
 yarn db:push:db2      # push DB2 schema
 yarn db:push:all      # push both
+yarn db:reset:db2     # wipe + recreate DB2 (audit log only)
+yarn db:reset:all     # wipe + recreate both (dev only — destroys all data)
 yarn docker:dev-db:start   # local Postgres for dev
 ```
 
