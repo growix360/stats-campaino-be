@@ -1,2 +1,8 @@
 [phases.install]
 cmds = ["yarn install --frozen-lockfile --production=false"]
+
+[phases.build]
+cmds = ["yarn build"]
+
+[start]
+cmd = "yarn start"

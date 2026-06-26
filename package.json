@@ -8,7 +8,7 @@
   "main": "src/index.ts",
   "repository": "https://github.com/campaino/campaino-stater-service-be",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node build/src/index.js",
+    "start": "cross-env NODE_ENV=production prisma migrate deploy --schema prisma/db2/schema.prisma && node build/src/index.js",
     "dev": "cross-env NODE_ENV=development nodemon src/index.ts",
     "test": "docker-compose -f docker-compose.only-db-test.yml up -d && yarn db:push:all && jest -i --colors --verbose --detectOpenHandles && docker-compose -f docker-compose.only-db-test.yml down",
     "test:watch": "docker-compose -f docker-compose.only-db-test.yml up -d && yarn db:push:all && jest -i --watchAll && docker-compose -f docker-compose.only-db-test.yml down",

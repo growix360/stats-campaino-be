@@ -3,19 +3,22 @@ import httpStatus from "http-status"
 import config from "../config/config"
 import logger from "../config/logger"
 import ApiError from "../utils/ApiError"
-import { PrismaTypesDB2 } from "../client"
+import { PrismaTypesDB1, PrismaTypesDB2 } from "../client"
+
+const isPrismaClientError = (error: unknown): boolean =>
+  error instanceof PrismaTypesDB1.PrismaClientKnownRequestError ||
+  error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
 
 export const errorConverter: ErrorRequestHandler = (err, req, res, next) => {
   let error = err
   if (!(error instanceof ApiError)) {
     const statusCode =
       error.statusCode ??
-      (error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
-        ? httpStatus.BAD_REQUEST
-        : httpStatus.INTERNAL_SERVER_ERROR)
+      (isPrismaClientError(error) ? httpStatus.BAD_REQUEST : httpStatus.INTERNAL_SERVER_ERROR)
     const message =
       error.message || (httpStatus as Record<number, string>)[statusCode] || "Error"
-    error = new ApiError(statusCode, message, false, err.stack)
+    const isOperational = statusCode < httpStatus.INTERNAL_SERVER_ERROR
+    error = new ApiError(statusCode, message, isOperational, err.stack)
   }
   next(error)
 }
@@ -36,8 +39,15 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     ...(config.env === "development" && { stack: err.stack }),
   }
 
-  if (config.env === "development") {
+  if (config.env === "production" && !err.isOperational) {
+    statusCode = httpStatus.INTERNAL_SERVER_ERROR
+    message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR]
+  }
+
+  if (statusCode >= httpStatus.INTERNAL_SERVER_ERROR || config.env === "development") {
     logger.error(err)
+  } else {
+    logger.warn(`${statusCode}: ${err.message}`)
   }
 
   res.status(statusCode).send(response)

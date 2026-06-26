@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import httpStatus from "http-status"
+import config from "../config/config"
 import ApiError from "./ApiError"
 import { dedupeAgainstExisting, isValidEmail } from "./emailFileParsing"
 
@@ -13,7 +14,7 @@ let lineIndex: LineIndex[] | null = null
 let indexedPath: string | null = null
 
 const getCustomersCsvPath = (): string => {
-  const configured = process.env.CUSTOMERS_CSV_PATH
+  const configured = config.stats.customersCsvPath
   if (configured) {
     return path.isAbsolute(configured)
       ? configured

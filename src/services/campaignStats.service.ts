@@ -1,5 +1,7 @@
+import httpStatus from "http-status"
 import { EmailStatus } from "../../generated/client1"
-import { prismaDB1 as prisma, prismaDB2 } from "../client"
+import { prismaDB1 as prisma, prismaDB2, PrismaTypesDB1, PrismaTypesDB2 } from "../client"
+import ApiError from "../utils/ApiError"
 import {
   Default_UserAgent,
   Default_UserIP,
@@ -21,6 +23,10 @@ import {
   EmailSource,
 } from "../types/stats"
 import { User } from "../../generated/client1"
+
+const isPrismaClientError = (error: unknown): boolean =>
+  error instanceof PrismaTypesDB1.PrismaClientKnownRequestError ||
+  error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
 
 const BATCH_SIZE = 1000
 
@@ -234,10 +240,12 @@ const updateStats = async (payload: {
     maxIncrease: payload.maxIncrease,
   })
 
-  const repeatOpenDelta = deltas.totalOpens
-  const repeatClickDelta = deltas.totalClicks
+  const repeatOpenDelta = Math.max(0, deltas.totalOpens - deltas.uniqueOpens)
+  const repeatClickDelta = Math.max(0, deltas.totalClicks - deltas.uniqueClicks)
 
-  const auditRecord = await prismaDB2.campaignUpdateHistory.create({
+  let auditRecord
+  try {
+    auditRecord = await prismaDB2.campaignUpdateHistory.create({
     data: {
       campaignId: payload.campaignId,
       name: campaign.name,
@@ -249,7 +257,16 @@ const updateStats = async (payload: {
       totalClicks: deltas.totalClicks,
       uniqueClicks: deltas.uniqueClicks,
     },
-  })
+    })
+  } catch (error) {
+    if (isPrismaClientError(error)) {
+      throw new ApiError(
+        httpStatus.SERVICE_UNAVAILABLE,
+        "Audit database schema is out of date. Run: yarn prisma:migrate:db2",
+      )
+    }
+    throw error
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
