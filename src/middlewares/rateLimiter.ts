@@ -5,3 +5,8 @@ export const authLimiter = rateLimit({
   max: 20,
   skipSuccessfulRequests: true,
 })
+
+export const statsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+})

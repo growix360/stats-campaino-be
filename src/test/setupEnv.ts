@@ -1,5 +1,6 @@
 process.env.NODE_ENV = "test"
-process.env.PORT = "3001"
+process.env.PORT = "4001"
 process.env.JWT_SECRET = "test-secret-key-for-jest"
 process.env.DATABASE_URL = "postgresql://postgres:secret@localhost:5432/test?schema=public"
 process.env.DATABASE_URL_DB2 = "postgresql://postgres:secret@localhost:5432/test2?schema=public"
+process.env.ENABLE_SWAGGER = "true"

@@ -1,0 +1,16 @@
+---
+description: Campaino stater service critical rules for AI agents
+alwaysApply: true
+---
+
+# Campaino Stater Service
+
+Read [AGENTS.md](../../AGENTS.md) for full context. Critical rules:
+
+1. **Dual DB** — `prismaDB1` for campaigns/emails/users; `prismaDB2` for audit history only
+2. **Imports** — use `generated/client1` and `generated/client2`, never `@prisma/client`
+3. **Config** — use `src/config/config.ts`, not raw `process.env`
+4. **RBAC** — enforce in services via `accessControl.ts`; ADMIN=all, MANAGER=assigned domains
+5. **Stats update** — DB2 audit row created before DB1 transaction; rollback audit on failure
+6. **JWT** — shared secret with main Campaino backend; only ADMIN/MANAGER can login
+7. **DB1 migrations** — coordinate with main backend before changing shared schema

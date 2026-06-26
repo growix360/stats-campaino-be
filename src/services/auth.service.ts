@@ -1,17 +1,16 @@
 import { User, Role } from "../../generated/client1"
 import { prismaDB1 } from "../client"
+import config from "../config/config"
 import ApiError from "../utils/ApiError"
 import httpStatus from "http-status"
-import { encryptPassword } from "../utils/encryption"
+import { encryptPassword, isPasswordMatch } from "../utils/encryption"
 import jwt from "jsonwebtoken"
-const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"
-import { isPasswordMatch } from "../utils/encryption"
 
 const register = async (
   email: string,
   password: string,
   name: string,
-  role: Role = Role.MANAGER,
+  role: Role = Role.USER,
 ): Promise<Partial<User> & { access_token: string }> => {
   const existingUser = await prismaDB1.user.findUnique({
     where: { email },
@@ -45,7 +44,7 @@ const register = async (
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,
+    config.jwt.secret,
     { expiresIn: "1h" },
   )
 
@@ -57,32 +56,30 @@ const loginUserWithEmailAndPassword = async (
   password: string,
 ): Promise<Partial<User> & { access_token: string }> => {
   // Find the user by email
-  const existingUser = await prismaDB1.user.findUnique({
-    where: { email },
+  const existingUser = await prismaDB1.user.findFirst({
+    where: { email, deletedAt: null },
     select: {
       id: true,
       email: true,
       name: true,
       role: true,
-      password: true, // Include the hashed password for validation
+      password: true,
       createdAt: true,
       updatedAt: true,
     },
   })
 
-  // Throw an error if the user does not exist
   if (!existingUser) {
-    throw new ApiError(404, "User with this email does not exist.")
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Incorrect email or password.")
   }
 
   if (existingUser.role !== Role.MANAGER && existingUser.role !== Role.ADMIN) {
     throw new ApiError(httpStatus.FORBIDDEN, "You are not allowed to login.")
   }
 
-  // Validate the password
   const isPasswordValid = await isPasswordMatch(password, existingUser.password)
   if (!isPasswordValid) {
-    throw new ApiError(401, "Incorrect password.")
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Incorrect email or password.")
   }
 
   // Generate the JWT token
@@ -92,8 +89,8 @@ const loginUserWithEmailAndPassword = async (
       email: existingUser.email,
       role: existingUser.role,
     },
-    JWT_SECRET,
-    { expiresIn: "1h" }, // Token expires in 1 hour
+    config.jwt.secret,
+    { expiresIn: "1h" },
   )
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

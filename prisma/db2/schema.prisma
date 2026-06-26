@@ -25,4 +25,7 @@ model CampaignUpdateHistory {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   userId    String?
+
+  @@index([campaignId])
+  @@index([userId])
 }

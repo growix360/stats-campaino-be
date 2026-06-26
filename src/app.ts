@@ -13,6 +13,7 @@ import routes from "./routes/v1"
 import { errorConverter, errorHandler } from "./middlewares/error"
 import ApiError from "./utils/ApiError"
 import { Request, Response, NextFunction } from "express"
+import { prismaDB1, prismaDB2 } from "./client"
 
 const app = express()
 
@@ -37,11 +38,15 @@ app.use(xss())
 // app.use(compression());
 
 // enable cors
-app.use(cors())
-app.options("*", cors())
+const corsOptions =
+  config.env === "production" && config.cors.origins.length > 0
+    ? { origin: config.cors.origins }
+    : {}
+app.use(cors(corsOptions))
+app.options("*", cors(corsOptions))
 
 // jwt authentication
-app.use(passport.initialize());
+app.use(passport.initialize())
 passport.use("jwt", jwtStrategy)
 
 // limit repeated failed requests to auth endpoints
@@ -53,10 +58,11 @@ app.use(express.raw({ type: "text/plain" }))
 // v1 api routes
 app.use("/v1", routes)
 
-//healthcheck
-app.use("/health", async (req: Request, res: Response, next: NextFunction) => {
+// healthcheck
+app.get("/health", async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    res.status(httpStatus.OK).send({ message: "ok" })
+    await Promise.all([prismaDB1.$queryRaw`SELECT 1`, prismaDB2.$queryRaw`SELECT 1`])
+    res.status(httpStatus.OK).send({ message: "ok", databases: { db1: "ok", db2: "ok" } })
   } catch (error) {
     next(error)
   }

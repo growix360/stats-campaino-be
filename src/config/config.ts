@@ -14,6 +14,8 @@ const envVarsSchema = Joi.object()
     CUSTOMERS_CSV_PATH: Joi.string().optional(),
     MAX_STATS_INCREASE_PER_REQUEST: Joi.number().integer().positive().default(10000),
     MAX_UPLOAD_EMAILS: Joi.number().integer().positive().default(50000),
+    CORS_ORIGINS: Joi.string().optional().description("Comma-separated allowed origins (production)"),
+    ENABLE_SWAGGER: Joi.boolean().truthy("true").falsy("false").default(true),
   })
   .unknown()
 
@@ -36,4 +38,10 @@ export default {
     maxIncreasePerRequest: envVars.MAX_STATS_INCREASE_PER_REQUEST,
     maxUploadEmails: envVars.MAX_UPLOAD_EMAILS,
   },
+  cors: {
+    origins: envVars.CORS_ORIGINS
+      ? envVars.CORS_ORIGINS.split(",").map((origin: string) => origin.trim()).filter(Boolean)
+      : [],
+  },
+  enableSwagger: envVars.ENABLE_SWAGGER,
 }

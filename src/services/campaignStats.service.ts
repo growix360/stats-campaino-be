@@ -1,7 +1,5 @@
-import httpStatus from "http-status"
 import { EmailStatus } from "../../generated/client1"
 import { prismaDB1 as prisma, prismaDB2 } from "../client"
-import ApiError from "../utils/ApiError"
 import {
   Default_UserAgent,
   Default_UserIP,
@@ -239,7 +237,22 @@ const updateStats = async (payload: {
   const repeatOpenDelta = deltas.totalOpens
   const repeatClickDelta = deltas.totalClicks
 
-  await prisma.$transaction(async (tx) => {
+  const auditRecord = await prismaDB2.campaignUpdateHistory.create({
+    data: {
+      campaignId: payload.campaignId,
+      name: campaign.name,
+      userId: payload.user.id,
+      sent: deltas.sent,
+      delivered: deltas.delivered,
+      totalOpens: deltas.totalOpens,
+      uniqueOpens: deltas.uniqueOpens,
+      totalClicks: deltas.totalClicks,
+      uniqueClicks: deltas.uniqueClicks,
+    },
+  })
+
+  try {
+    await prisma.$transaction(async (tx) => {
     if (deltas.sent > 0) {
       await emailProvisioningService.provisionSentEmails(tx, {
         campaignId: campaign.id,
@@ -376,23 +389,18 @@ const updateStats = async (payload: {
         repeatClickEvents,
       )
     }
-  })
+    })
+  } catch (error) {
+    await prismaDB2.campaignUpdateHistory
+      .update({
+        where: { id: auditRecord.id },
+        data: { deletedAt: new Date() },
+      })
+      .catch(() => undefined)
+    throw error
+  }
 
   const after = await buildSnapshot(payload.campaignId)
-
-  await prismaDB2.campaignUpdateHistory.create({
-    data: {
-      campaignId: payload.campaignId,
-      name: campaign.name,
-      userId: payload.user.id,
-      sent: deltas.sent,
-      delivered: deltas.delivered,
-      totalOpens: deltas.totalOpens,
-      uniqueOpens: deltas.uniqueOpens,
-      totalClicks: deltas.totalClicks,
-      uniqueClicks: deltas.uniqueClicks,
-    },
-  })
 
   return {
     before,

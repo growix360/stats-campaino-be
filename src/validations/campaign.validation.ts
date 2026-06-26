@@ -19,13 +19,13 @@ const updateStatsBodySchema = Joi.object({
 
 const getCampaignStats = {
   params: Joi.object().keys({
-    campaignId: Joi.string().required(),
+    campaignId: Joi.string().guid({ version: "uuidv4" }).required(),
   }),
 }
 
 const getAllCampaignUpdates = {
   query: Joi.object().keys({
-    campaignId: Joi.string().guid().optional(),
+    campaignId: Joi.string().guid({ version: "uuidv4" }).optional(),
     limit: Joi.number().integer().positive().default(10),
     page: Joi.number().integer().positive().default(1),
     search: Joi.string().allow("").optional(),

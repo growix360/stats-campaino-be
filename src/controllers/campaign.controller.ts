@@ -56,17 +56,19 @@ const getCampaigns = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, "User not authenticated")
   }
 
-  const page = parseInt(req.query.page as string)
-  const limit = parseInt(req.query.limit as string)
-  const search = req.query.search as string | ""
-  const sortBy = req.query.sortBy as keyof PrismaDB1.CampaignOrderByWithRelationInput
-  const sortDirection = req.query.sortDirection as PrismaDB1.SortOrder
+  const { page, limit, search, sortBy, sortDirection } = req.query as unknown as {
+    page: number
+    limit: number
+    search?: string
+    sortBy: keyof PrismaDB1.CampaignOrderByWithRelationInput
+    sortDirection: PrismaDB1.SortOrder
+  }
 
   const campaigns = await campaignService.getCampaigns({
     user,
     page,
     limit,
-    search,
+    search: search ?? "",
     sortBy,
     sortDirection,
   })
@@ -80,18 +82,20 @@ const getCampaignsUpdateStatus = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, "User not authenticated")
   }
 
-  const page = parseInt(req.query.page as string)
-  const limit = parseInt(req.query.limit as string)
-  const search = req.query.search as string | ""
-  const sortBy = req.query.sortBy as keyof PrismaDB2.CampaignUpdateHistoryOrderByWithRelationInput
-  const sortDirection = req.query.sortDirection as PrismaDB2.SortOrder
-  const campaignId = req.query.campaignId as string
+  const { page, limit, search, sortBy, sortDirection, campaignId } = req.query as unknown as {
+    page: number
+    limit: number
+    search?: string
+    sortBy: keyof PrismaDB2.CampaignUpdateHistoryOrderByWithRelationInput
+    sortDirection: PrismaDB2.SortOrder
+    campaignId?: string
+  }
 
   const campaigns = await campaignService.getCampaignsUpdateStatus({
     user,
     page,
     limit,
-    search,
+    search: search ?? "",
     sortBy,
     sortDirection,
     campaignId,

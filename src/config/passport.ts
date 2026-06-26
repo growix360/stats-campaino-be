@@ -9,14 +9,14 @@ const jwtOptions = {
 
 const jwtVerify: VerifyCallback = async (payload, done) => {
   try {
-    const user = await prismaDB1.user.findUnique({
+    const user = await prismaDB1.user.findFirst({
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
       },
-      where: { id: payload.id },
+      where: { id: payload.id, deletedAt: null },
     })
     if (!user) {
       return done(null, false)

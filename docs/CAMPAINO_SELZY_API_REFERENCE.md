@@ -177,11 +177,11 @@ router.post("/", auth(), requireRole(Role.ADMIN, Role.MANAGER), handler)
 |--------|----------|
 | `isAdmin(user)` | Admin bypass |
 | `isManager(user)` | Manager check |
-| `buildCampaignScope(user)` | ADMIN: all; MANAGER: own; USER: assigned domains |
-| `buildResourceOwnerScope(user)` | ADMIN: all; MANAGER: `createdBy = user.id`; USER: none |
+| `assertAuthenticatedRole(user)` | Rejects USER role |
+| `buildCampaignScope(user)` | ADMIN: all; MANAGER: assigned domains; empty if no assignments |
 | `assertCampaignAccess(user, campaignId)` | Throws 403/404 if user can't access campaign |
-| `assertDomainAssigned(user, domainId)` | Throws 403 if domain not assigned |
 | `getAssignedDomainIds(userId)` | Returns domain IDs for a user |
+| `getAccessibleCampaignIds(user)` | `null` for admin; campaign ID list for manager |
 
 **Always apply access control in services**, not just route-level role checks.
 
@@ -223,8 +223,8 @@ const create = catchAsync(async (req, res) => {
 
 ### Swagger / OpenAPI
 
-- **UI:** `GET /v1/docs` (all environments)
-- **Assembly:** `src/docs/swagger.ts` uses swagger-jsdoc
+- **UI:** `GET /v1/docs` (when `ENABLE_SWAGGER=true`)
+- **Assembly:** `src/routes/v1/docs.route.ts` uses swagger-jsdoc
 - **Base spec:** `src/docs/swaggerDef.ts`
 - **Schemas:** `src/docs/components.yml`
 - **Paths:** `src/docs/paths/*.yml` (one file per resource module)

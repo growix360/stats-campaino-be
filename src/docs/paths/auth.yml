@@ -33,5 +33,9 @@
                           type: string
       "401":
         $ref: "#/components/responses/Unauthorized"
-      "404":
-        $ref: "#/components/responses/NotFound"
+      "403":
+        description: USER role is not allowed to log in
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Error"

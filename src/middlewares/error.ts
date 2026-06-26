@@ -9,16 +9,18 @@ export const errorConverter: ErrorRequestHandler = (err, req, res, next) => {
   let error = err
   if (!(error instanceof ApiError)) {
     const statusCode =
-      error.statusCode || error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
+      error.statusCode ??
+      (error instanceof PrismaTypesDB2.PrismaClientKnownRequestError
         ? httpStatus.BAD_REQUEST
-        : httpStatus.INTERNAL_SERVER_ERROR
-    const message = error.message || httpStatus[statusCode]
+        : httpStatus.INTERNAL_SERVER_ERROR)
+    const message =
+      error.message || (httpStatus as Record<number, string>)[statusCode] || "Error"
     error = new ApiError(statusCode, message, false, err.stack)
   }
   next(error)
 }
 
-// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   let { statusCode, message } = err
   if (config.env === "production" && !err.isOperational) {

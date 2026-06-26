@@ -112,6 +112,8 @@ model Email {
 
   openEvents  Open[]
   clickEvents Click[]
+
+  @@index([campaignId])
 }
 
 model Open {
@@ -124,6 +126,9 @@ model Open {
 
   email    Email    @relation(fields: [emailId], references: [id])
   campaign Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([campaignId])
+  @@index([emailId])
 }
 
 model Click {
@@ -136,6 +141,9 @@ model Click {
 
   email    Email    @relation(fields: [emailId], references: [id])
   campaign Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([campaignId])
+  @@index([emailId])
 }
 
 model Links {

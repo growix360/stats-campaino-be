@@ -1,6 +1,7 @@
 import multer from "multer"
 import httpStatus from "http-status"
 import ApiError from "./ApiError"
+import { NextFunction, Request, Response } from "express"
 
 const storage = multer.memoryStorage()
 
@@ -21,5 +22,29 @@ export const statsUpload = multer({
     files: 1,
   },
 })
+
+export const handleMulterError = (
+  err: unknown,
+  _req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return next(new ApiError(httpStatus.BAD_REQUEST, "File too large. Maximum size is 10 MB."))
+    }
+    return next(new ApiError(httpStatus.BAD_REQUEST, err.message))
+  }
+  return next(err)
+}
+
+export const uploadStatsFile = (req: Request, res: Response, next: NextFunction) => {
+  statsUpload.single("file")(req, res, (err) => {
+    if (err) {
+      return handleMulterError(err, req, res, next)
+    }
+    next()
+  })
+}
 
 export default statsUpload
