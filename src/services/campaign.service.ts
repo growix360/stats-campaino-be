@@ -28,6 +28,7 @@ const getCampaigns = async (payload: {
             { templateName: { contains: payload.search, mode: "insensitive" } },
             { emailBody: { contains: payload.search, mode: "insensitive" } },
             { link: { contains: payload.search, mode: "insensitive" } },
+            { campaignCode: { contains: payload.search, mode: "insensitive" } },
           ],
         }
       : {}),

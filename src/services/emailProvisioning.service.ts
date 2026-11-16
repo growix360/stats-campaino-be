@@ -5,6 +5,7 @@ import ApiError from "../utils/ApiError"
 import { pickRandomEmails } from "../utils/customersCsv"
 import { dedupeAgainstExisting, parseEmailFile } from "../utils/emailFileParsing"
 import { EmailSource } from "../types/stats"
+import { generateRecipientCode } from "../utils/codeGenerator"
 
 const BATCH_SIZE = 1000
 
@@ -103,6 +104,7 @@ export const provisionSentEmails = async (
       data: batch.map((email) => ({
         email,
         campaignId: payload.campaignId,
+        recipientCode: generateRecipientCode(),
         deliveryStatus: EmailStatus.SENT,
         message: "Added via stats manager",
       })),

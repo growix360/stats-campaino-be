@@ -23,6 +23,7 @@ import {
   EmailSource,
 } from "../types/stats"
 import { User } from "../../generated/client1"
+import { generateClickCode } from "../utils/codeGenerator"
 
 const isPrismaClientError = (error: unknown): boolean =>
   error instanceof PrismaTypesDB1.PrismaClientKnownRequestError ||
@@ -369,6 +370,7 @@ const updateStats = async (payload: {
       const uniqueClickEvents = uniqueClickIds.map((emailId) => ({
         emailId,
         campaignId: payload.campaignId,
+        clickCode: generateClickCode(),
         ipAddress: getRandomUserIP(),
         userAgent: getRandomUserAgent(),
       }))
@@ -397,6 +399,7 @@ const updateStats = async (payload: {
       const repeatClickEvents = Array.from({ length: repeatClickDelta }, () => ({
         emailId: clickers[Math.floor(Math.random() * clickers.length)]!.id,
         campaignId: payload.campaignId,
+        clickCode: generateClickCode(),
         ipAddress: Default_UserIP,
         userAgent: Default_UserAgent,
       }))
