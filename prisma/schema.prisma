@@ -11,6 +11,7 @@ datasource db {
 
 model Campaign {
   id              String    @id @default(uuid())
+  campaignCode    String?   @unique
   name            String
   subject         String
   link            String
@@ -76,6 +77,7 @@ model EmailList {
   emails          String[]
   uploadedAt      DateTime   @default(now())
   isUsed          Boolean    @default(false)
+  allowReuse      Boolean    @default(false)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   deletedAt       DateTime?
@@ -99,6 +101,7 @@ model User {
 
 model Email {
   id              String      @id @default(uuid())
+  recipientCode   String?     @unique
   email           String
   campaignId      String
   deliveryStatus  EmailStatus
@@ -132,6 +135,7 @@ model Open {
 
 model Click {
   id         String   @id @default(uuid())
+  clickCode  String?  @unique
   emailId    String
   campaignId String
   ipAddress  String
