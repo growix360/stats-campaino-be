@@ -1,9 +1,11 @@
 import { describe, expect, it } from "@jest/globals"
 import ApiError from "../utils/ApiError"
 import {
+  buildLimits,
   computeDeltas,
   resolveTargets,
   validateEligibility,
+  validateEventDeltas,
   validateFunnel,
   validateMonotonicIncrease,
   validateStatsUpdate,
@@ -88,6 +90,66 @@ describe("statsValidation", () => {
 
     expect(result.deltas.sent).toBe(10)
     expect(result.resolved.delivered).toBe(15)
+  })
+
+  it("allows total opens and clicks to exceed unique counts", () => {
+    const result = validateStatsUpdate({
+      current: {
+        sent: 100,
+        delivered: 100,
+        uniqueOpens: 0,
+        totalOpens: 0,
+        uniqueClicks: 0,
+        totalClicks: 0,
+      },
+      targets: {
+        uniqueOpens: 10,
+        totalOpens: 50,
+        uniqueClicks: 5,
+        totalClicks: 25,
+      },
+      pools: {
+        sentFromSource: 0,
+        deliverableSent: 0,
+        openableDelivered: 100,
+        repeatableOpens: 10,
+        clickableOpened: 10,
+        repeatableClicks: 5,
+      },
+      maxIncrease: 10000,
+    })
+
+    expect(result.resolved.totalOpens).toBe(50)
+    expect(result.resolved.totalClicks).toBe(25)
+  })
+
+  it("requires each new unique event to also increase its total", () => {
+    expect(() =>
+      validateEventDeltas({
+        sent: 0,
+        delivered: 0,
+        uniqueOpens: 10,
+        totalOpens: 5,
+        uniqueClicks: 0,
+        totalClicks: 0,
+      }),
+    ).toThrow("totalOpens increase (5) must be >= uniqueOpens increase (10)")
+  })
+
+  it("reports repeat totals as unbounded when eligible recipients exist", () => {
+    expect(
+      buildLimits(baseCurrent, {
+        sentFromSource: 0,
+        deliverableSent: 5,
+        openableDelivered: 3,
+        repeatableOpens: 2,
+        clickableOpened: 1,
+        repeatableClicks: 1,
+      }),
+    ).toMatchObject({
+      maxTotalOpens: null,
+      maxTotalClicks: null,
+    })
   })
 
   it("rejects when eligibility pool is insufficient", () => {

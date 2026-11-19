@@ -110,6 +110,22 @@ export const validateDeltaLimits = (
   }
 }
 
+export const validateEventDeltas = (deltas: CampaignStatsSnapshot): void => {
+  if (deltas.totalOpens < deltas.uniqueOpens) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `totalOpens increase (${deltas.totalOpens}) must be >= uniqueOpens increase (${deltas.uniqueOpens})`,
+    )
+  }
+
+  if (deltas.totalClicks < deltas.uniqueClicks) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `totalClicks increase (${deltas.totalClicks}) must be >= uniqueClicks increase (${deltas.uniqueClicks})`,
+    )
+  }
+}
+
 const validateBoundedDelta = (delta: number, pool: number, label: string): void => {
   if (delta > pool) {
     throw new ApiError(
@@ -132,12 +148,15 @@ export const validateEligibility = (
   deltas: CampaignStatsSnapshot,
   pools: EligibilityPools,
 ): void => {
+  const repeatOpenDelta = Math.max(0, deltas.totalOpens - deltas.uniqueOpens)
+  const repeatClickDelta = Math.max(0, deltas.totalClicks - deltas.uniqueClicks)
+
   validateBoundedDelta(deltas.sent, pools.sentFromSource, "sent")
   validateBoundedDelta(deltas.delivered, pools.deliverableSent, "delivered")
   validateBoundedDelta(deltas.uniqueOpens, pools.openableDelivered, "uniqueOpens")
-  validateRepeatDelta(deltas.totalOpens, pools.repeatableOpens, "totalOpens")
+  validateRepeatDelta(repeatOpenDelta, pools.repeatableOpens, "repeat opens")
   validateBoundedDelta(deltas.uniqueClicks, pools.clickableOpened, "uniqueClicks")
-  validateRepeatDelta(deltas.totalClicks, pools.repeatableClicks, "totalClicks")
+  validateRepeatDelta(repeatClickDelta, pools.repeatableClicks, "repeat clicks")
 }
 
 export const buildProjectedPools = (
@@ -183,6 +202,7 @@ export const validateStatsUpdate = (payload: {
 
   const deltas = computeDeltas(payload.current, resolved)
   validateDeltaLimits(deltas, payload.maxIncrease)
+  validateEventDeltas(deltas)
   validateEligibility(deltas, payload.pools)
 
   return { resolved, deltas }
@@ -200,7 +220,7 @@ export const buildLimits = (
 } => ({
   maxDelivered: current.delivered + pools.deliverableSent,
   maxUniqueOpens: current.uniqueOpens + pools.openableDelivered,
-  maxTotalOpens: current.totalOpens + pools.repeatableOpens,
+  maxTotalOpens: pools.repeatableOpens > 0 ? null : current.totalOpens,
   maxUniqueClicks: current.uniqueClicks + pools.clickableOpened,
-  maxTotalClicks: current.totalClicks + pools.repeatableClicks,
+  maxTotalClicks: pools.repeatableClicks > 0 ? null : current.totalClicks,
 })
